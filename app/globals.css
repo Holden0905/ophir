@@ -1,26 +1,217 @@
 @import "tailwindcss";
 
+/* ----------------------------------------------------------------- */
+/* Ophir design system                                                */
+/* ----------------------------------------------------------------- */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #111111;
+  --bg-card: #141414;
+  --bg-elevated: #1a1a1a;
+  --border: #222222;
+  --border-subtle: #1a1a1a;
+  --text-primary: #e8e6e1;
+  --text-secondary: #8a8680;
+  --text-muted: #4a4845;
+  --accent-amber: #f59e0b;
+  --accent-amber-dim: #92630a;
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --accent-blue: #3b82f6;
+  --regime-on: #22c55e;
+  --regime-off: #ef4444;
+  --regime-transition: #f59e0b;
+  --regime-choppy: #6b7280;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-card: var(--bg-card);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-border-default: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-amber: var(--accent-amber);
+  --color-amber-dim: var(--accent-amber-dim);
+  --color-up: var(--accent-green);
+  --color-down: var(--accent-red);
+  --color-info: var(--accent-blue);
+  --color-regime-on: var(--regime-on);
+  --color-regime-off: var(--regime-off);
+  --color-regime-transition: var(--regime-transition);
+  --color-regime-choppy: var(--regime-choppy);
+
+  --font-data: var(--font-plex-mono), ui-monospace, monospace;
+  --font-editorial: var(--font-playfair), ui-serif, Georgia, serif;
+  --font-newspaper: var(--font-newspaper), "Libre Baskerville", "Source Serif Pro",
+    Georgia, ui-serif, serif;
+  --font-ui: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 4px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01", "ss02";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Subtle grain overlay — full-viewport, behind content */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+main,
+#__app {
+  position: relative;
+  z-index: 1;
+}
+
+.font-data {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-feature-settings: "tnum", "zero";
+}
+.font-editorial {
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
+}
+.font-newspaper {
+  font-family: var(--font-newspaper);
+}
+.font-ui {
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Card primitive */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.card-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.divider {
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+/* Active/selected glow */
+.amber-glow {
+  box-shadow: 0 0 0 1px var(--accent-amber);
+}
+.amber-glow-soft {
+  box-shadow: 0 0 0 1px var(--accent-amber-dim);
+}
+
+/* Pulsing skeleton for loading states */
+@keyframes amber-pulse {
+  0%,
+  100% {
+    background-color: var(--bg-elevated);
+    border-color: var(--border-subtle);
+  }
+  50% {
+    background-color: #1f1a10;
+    border-color: var(--accent-amber-dim);
+  }
+}
+.pulse-amber {
+  animation: amber-pulse 1.6s ease-in-out infinite;
+}
+
+/* Numeric value coloring helpers */
+.value-up {
+  color: var(--accent-green);
+}
+.value-down {
+  color: var(--accent-red);
+}
+.value-flat {
+  color: var(--text-secondary);
+}
+
+/* Scrollbars — sized down for dark UI */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Inputs */
+input,
+textarea,
+select {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 0 1px var(--accent-amber-dim);
+}
+
+button {
+  user-select: none;
+}
+
+/* Newspaper-set body prose — for the regime brief and discovery brief.
+   Sized and tracked to read like a column of FT body copy: smaller than
+   default base, tighter leading, slight negative letter-spacing on the serif
+   to keep words compact on screen. First line of each paragraph indented
+   from the second paragraph onward, in the newspaper convention. */
+.prose-editorial {
+  font-family: var(--font-newspaper);
+  font-style: normal;
+  font-size: 0.9375rem; /* 15px */
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  color: var(--text-primary);
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.prose-editorial p + p {
+  margin-top: 0.6em;
+  text-indent: 1.25em;
+}
+.prose-editorial em,
+.prose-editorial i {
+  font-style: italic;
+}
+.prose-editorial strong,
+.prose-editorial b {
+  font-weight: 700;
 }
