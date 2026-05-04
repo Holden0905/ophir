@@ -17,9 +17,14 @@ export async function POST(request: NextRequest) {
   const snapshot = await buildRegimeSnapshot(snapshotType);
 
   const svc = createServiceClient();
+  // Insert as a new row each time so the briefs table accumulates a
+  // history. Previously this upserted on (snapshot_type, snapshot_date),
+  // which silently overwrote earlier briefs on the same trading day —
+  // the dashboard's "Recent briefs" section was always near-empty as a
+  // result.
   const { data, error } = await svc
     .from("regime_snapshots")
-    .upsert(snapshot, { onConflict: "snapshot_type,snapshot_date" })
+    .insert(snapshot)
     .select("*")
     .single();
 

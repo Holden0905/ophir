@@ -17,9 +17,8 @@ export default async function DashboardPage() {
   const { data: snapshots } = await supabase
     .from("regime_snapshots")
     .select("*")
-    .order("snapshot_date", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(5);
+    .limit(10);
 
   const list = (snapshots ?? []) as RegimeSnapshot[];
   const latest = list[0] ?? null;
