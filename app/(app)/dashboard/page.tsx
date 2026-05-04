@@ -4,6 +4,7 @@ import { CryptoBarometer } from "@/components/regime/CryptoBarometer";
 import { SectorRotation } from "@/components/regime/SectorRotation";
 import { RegimeBadge } from "@/components/regime/RegimeBadge";
 import { RegimeNarrative } from "@/components/regime/RegimeNarrative";
+import { RegimeLegend } from "@/components/regime/RegimeLegend";
 import { GenerateBriefButton } from "@/components/regime/GenerateBriefButton";
 import { relativeTime } from "@/lib/format";
 import type { RegimeSnapshot } from "@/lib/supabase/types";
@@ -37,6 +38,7 @@ export default async function DashboardPage() {
           classification={latest?.regime_classification ?? null}
           size="lg"
         />
+        <RegimeLegend />
         <RegimeNarrative
           narrative={latest?.narrative ?? null}
           createdAt={latest?.created_at ?? null}
