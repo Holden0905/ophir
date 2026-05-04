@@ -141,6 +141,47 @@ export function volumes(series: YahooSeries): number[] {
     .filter((v): v is number => v !== null && Number.isFinite(v));
 }
 
+// Q/Q revenue growth from Yahoo's quarterly income-statement time series.
+// Returns a fraction (e.g. 0.07 = +7%) or null if Yahoo lacks ≥2 quarters
+// of totalRevenue. Used as a fallback when FMP doesn't cover a ticker.
+export async function fetchYahooQuarterlyRevenueGrowth(
+  symbol: string,
+): Promise<number | null> {
+  const period1 = new Date();
+  period1.setFullYear(period1.getFullYear() - 2);
+
+  // The package's strict schema sometimes rejects fields Yahoo recently
+  // added; we only read totalRevenue + date so disable validation.
+  const rows = (await yahooFinance.fundamentalsTimeSeries(
+    symbol,
+    {
+      period1,
+      type: "quarterly",
+      module: "financials",
+    },
+    { validateResult: false },
+  )) as Array<{ date: Date | string | number; totalRevenue?: number | null }>;
+
+  const series = (rows ?? [])
+    .map((r) => ({
+      ts: new Date(r.date).getTime(),
+      revenue:
+        r.totalRevenue !== null &&
+        r.totalRevenue !== undefined &&
+        Number.isFinite(r.totalRevenue)
+          ? r.totalRevenue
+          : null,
+    }))
+    .filter((r): r is { ts: number; revenue: number } => r.revenue !== null)
+    .sort((a, b) => a.ts - b.ts);
+
+  if (series.length < 2) return null;
+  const current = series[series.length - 1].revenue;
+  const previous = series[series.length - 2].revenue;
+  if (previous === 0) return null;
+  return (current - previous) / previous;
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**

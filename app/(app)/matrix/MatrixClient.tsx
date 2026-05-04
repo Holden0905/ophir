@@ -59,6 +59,7 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
           body: JSON.stringify({
             tickers: rows.map((r) => r.stock.ticker),
             fundamentals: true,
+            force: true,
           }),
         });
         const json = (await res.json()) as {

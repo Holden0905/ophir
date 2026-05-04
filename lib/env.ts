@@ -32,4 +32,5 @@ export const env = {
   SUPABASE_SERVICE_ROLE_KEY: supabaseSecret,
   ANTHROPIC_API_KEY: required("ANTHROPIC_API_KEY"),
   ALPHA_VANTAGE_KEY: required("ALPHA_VANTAGE_KEY"),
+  FMP_API_KEY: required("FMP_API_KEY"),
 };

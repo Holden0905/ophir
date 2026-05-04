@@ -1,8 +1,17 @@
 import "server-only";
 
-import { closes, fetchYahooSeries, volumes } from "@/lib/data/yahoo";
+import {
+  closes,
+  fetchYahooQuarterlyRevenueGrowth,
+  fetchYahooSeries,
+  volumes,
+} from "@/lib/data/yahoo";
 import { ema, sma, rsi, pctChange, avg } from "@/lib/calculations/technicals";
 import { fetchOverview } from "@/lib/data/alphavantage";
+import {
+  fetchDebtToMarketCap,
+  fetchQuarterlyRevenueGrowth,
+} from "@/lib/data/fmp";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { StockTechnicals } from "@/lib/supabase/types";
 
@@ -108,37 +117,92 @@ export async function refreshFundamentals(
   }
 
   console.log(
-    `[refreshFundamentals] ${ticker} → calling Alpha Vantage OVERVIEW`,
+    `[refreshFundamentals] ${ticker} → calling Alpha Vantage OVERVIEW + FMP supplements`,
   );
-  const data = await fetchOverview(ticker);
-  if (!data) {
+  // Each source resolves independently — an AV rate-limit / daily-quota
+  // failure must not prevent FMP data from saving, and vice-versa.
+  const [avData, fmpQq, fmpDebtToCap] = await Promise.all([
+    fetchOverview(ticker).catch((e) => {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(`[refreshFundamentals] ${ticker} → AV failed: ${msg}`);
+      return null;
+    }),
+    fetchQuarterlyRevenueGrowth(ticker).catch((e) => {
+      console.warn(`[refreshFundamentals] ${ticker} → FMP Q/Q failed: ${e}`);
+      return null;
+    }),
+    fetchDebtToMarketCap(ticker).catch((e) => {
+      console.warn(
+        `[refreshFundamentals] ${ticker} → FMP debt/cap failed: ${e}`,
+      );
+      return null;
+    }),
+  ]);
+
+  // Yahoo Q/Q fallback — only run when FMP returns null, since this costs
+  // an extra Yahoo request and isn't needed when FMP covered the ticker.
+  let yahooQq: number | null = null;
+  if (fmpQq === null) {
+    yahooQq = await fetchYahooQuarterlyRevenueGrowth(ticker).catch((e) => {
+      console.warn(`[refreshFundamentals] ${ticker} → Yahoo Q/Q failed: ${e}`);
+      return null;
+    });
+  }
+
+  if (
+    !avData &&
+    fmpQq === null &&
+    yahooQq === null &&
+    fmpDebtToCap === null
+  ) {
     console.warn(
-      `[refreshFundamentals] ${ticker} → Alpha Vantage returned no data`,
+      `[refreshFundamentals] ${ticker} → all sources empty/failed`,
     );
     return { refreshed: false, reason: "not_found" };
   }
   console.log(
-    `[refreshFundamentals] ${ticker} → got name="${data.name}" cap=${data.market_cap} margin=${data.net_margin} yy=${data.yy_revenue_growth}`,
+    `[refreshFundamentals] ${ticker} → av=${avData ? "ok" : "null"} fmpQq=${fmpQq} yahooQq=${yahooQq} fmpDebtCap=${fmpDebtToCap}`,
   );
 
-  const { error } = await svc.from("stock_fundamentals").upsert(
-    {
-      ticker,
-      market_cap: safeNumber(data.market_cap),
-      gross_margin: safeNumber(data.gross_margin),
-      net_margin: safeNumber(data.net_margin),
-      qq_revenue_growth: safeNumber(data.qq_revenue_growth),
-      yy_revenue_growth: safeNumber(data.yy_revenue_growth),
-      net_debt: safeNumber(data.net_debt),
-      debt_market_cap_ratio:
-        data.market_cap && data.net_debt
-          ? safeNumber(data.net_debt / data.market_cap)
-          : null,
-      last_fetched_at: new Date().toISOString(),
-      data_source: "alpha_vantage",
-    },
-    { onConflict: "ticker" },
-  );
+  // Build a partial payload — only include columns we actually have data
+  // for. Supabase upsert with onConflict updates only the included columns,
+  // preserving any prior values for unfilled fields. That lets a partial
+  // FMP-only refresh land without clobbering existing AV-sourced fields.
+  const payload: Record<string, unknown> = {
+    ticker,
+    last_fetched_at: new Date().toISOString(),
+  };
+
+  if (avData) {
+    payload.market_cap = safeNumber(avData.market_cap);
+    payload.gross_margin = safeNumber(avData.gross_margin);
+    payload.net_margin = safeNumber(avData.net_margin);
+    payload.yy_revenue_growth = safeNumber(avData.yy_revenue_growth);
+    payload.net_debt = safeNumber(avData.net_debt);
+  }
+
+  // Q/Q priority: FMP (true sequential) → Yahoo (true sequential, free tier
+  // gap fallback) → AV (YoY on free tier — a known mismatch but better than
+  // null when both above are unavailable).
+  const qq = fmpQq ?? yahooQq ?? avData?.qq_revenue_growth ?? null;
+  if (qq !== null) payload.qq_revenue_growth = safeNumber(qq);
+
+  const debtCap =
+    fmpDebtToCap ??
+    (avData?.market_cap && avData?.net_debt
+      ? avData.net_debt / avData.market_cap
+      : null);
+  if (debtCap !== null) payload.debt_market_cap_ratio = safeNumber(debtCap);
+
+  const sources: string[] = [];
+  if (avData) sources.push("alpha_vantage");
+  if (fmpQq !== null || fmpDebtToCap !== null) sources.push("fmp");
+  if (yahooQq !== null) sources.push("yahoo");
+  payload.data_source = sources.join("+");
+
+  const { error } = await svc
+    .from("stock_fundamentals")
+    .upsert(payload, { onConflict: "ticker" });
 
   if (error) {
     console.error(
@@ -150,17 +214,19 @@ export async function refreshFundamentals(
     throw new Error(`stock_fundamentals upsert ${ticker}: ${error.message}`);
   }
 
-  // Best-effort backfill of company name/sector on the user's stocks row.
-  if (data.name || data.sector) {
+  // Best-effort backfill of company name/sector — only when AV gave them.
+  if (avData?.name || avData?.sector) {
     await svc
       .from("stocks")
       .update({
-        company_name: data.name ?? undefined,
-        sector: data.sector ?? undefined,
+        company_name: avData.name ?? undefined,
+        sector: avData.sector ?? undefined,
       })
       .eq("ticker", ticker);
   }
 
-  console.log(`[refreshFundamentals] ${ticker} → upsert OK`);
+  console.log(
+    `[refreshFundamentals] ${ticker} → upsert OK (${payload.data_source})`,
+  );
   return { refreshed: true };
 }
