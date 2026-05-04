@@ -4,6 +4,14 @@ import { useState } from "react";
 import { fmtPct, pctClass } from "@/lib/format";
 import type { SectorSnapshot } from "@/lib/supabase/types";
 
+// Display-only short names so every row fits on one line. The full names
+// are still stored in the snapshot and used by the AI prompt.
+const SECTOR_SHORT_NAMES: Record<string, string> = {
+  XLC: "Comm. Services",
+  XLY: "Cons. Discretionary",
+  XLP: "Cons. Staples",
+};
+
 export function SectorRotation({ sectors }: { sectors: SectorSnapshot[] }) {
   const [view, setView] = useState<"5d" | "30d">("5d");
 
@@ -77,10 +85,15 @@ export function SectorRotation({ sectors }: { sectors: SectorSnapshot[] }) {
           return (
             <div
               key={s.symbol}
-              className="grid grid-cols-[3.2rem_1fr_4rem] items-center gap-2"
+              className="grid grid-cols-[10rem_1fr_4rem] items-center gap-2"
             >
-              <div className="font-data text-xs text-[var(--text-secondary)]">
-                {s.symbol}
+              <div className="truncate text-xs" title={`${s.symbol} — ${s.name}`}>
+                <span className="font-data text-[var(--text-secondary)]">
+                  {s.symbol}
+                </span>
+                <span className="ml-1.5 font-ui text-[var(--text-muted)]">
+                  — {SECTOR_SHORT_NAMES[s.symbol] ?? s.name}
+                </span>
               </div>
               <div className="relative h-3 rounded bg-[var(--bg-elevated)]">
                 <div className="absolute left-1/2 top-0 h-full w-px bg-[var(--border)]" />

@@ -15,8 +15,10 @@ Write in 2-3 tight paragraphs. Editorial prose. No bullet points in the narrativ
 export interface RegimeInput {
   snapshot_type: SnapshotType;
   date: string;
+  spx_label: string;
+  nasdaq_label: string;
   spx: { price: number | null; changePct: number | null; vsEma21Pct: number | null };
-  qqq: { price: number | null; changePct: number | null };
+  nasdaq: { price: number | null; changePct: number | null };
   vix: { level: number | null; direction: string | null };
   btc: { price: number | null; change24h: number | null };
   eth: { price: number | null; change24h: number | null };
@@ -42,11 +44,19 @@ function buildUserPrompt(input: RegimeInput): string {
     )
     .join("\n");
 
+  const isPremarket = input.snapshot_type === "premarket";
+  const sessionNote = isPremarket
+    ? "Pre-market read — SPX/Nasdaq prints below are overnight futures (ES, NQ) reflecting current price discovery, not yesterday's cash close. Compare them against the cash 21 EMA to gauge how far futures have moved."
+    : "End-of-day read — SPX/Nasdaq prints below are cash settlements (^GSPC, ^NDX).";
+  const changeLabel = isPremarket ? "overnight" : "today";
+
   return `Generate a ${input.snapshot_type} market regime brief for ${input.date}.
 
+${sessionNote}
+
 MACRO:
-- SPX: ${fmt(input.spx.price)} (${fmt(input.spx.changePct)}% today), ${fmt(input.spx.vsEma21Pct)}% vs 21 EMA
-- QQQ: ${fmt(input.qqq.price)} (${fmt(input.qqq.changePct)}% today)
+- ${input.spx_label}: ${fmt(input.spx.price)} (${fmt(input.spx.changePct)}% ${changeLabel}), ${fmt(input.spx.vsEma21Pct)}% vs SPX 21 EMA
+- ${input.nasdaq_label}: ${fmt(input.nasdaq.price)} (${fmt(input.nasdaq.changePct)}% ${changeLabel})
 - VIX: ${fmt(input.vix.level)} (${input.vix.direction ?? "n/a"})
 
 CRYPTO:

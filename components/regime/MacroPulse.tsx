@@ -1,8 +1,15 @@
 import { DataCell } from "@/components/shared/DataCell";
 import { fmtPrice, fmtNumber } from "@/lib/format";
-import type { RegimeSnapshot } from "@/lib/supabase/types";
+import type { RegimeSnapshot, SnapshotType } from "@/lib/supabase/types";
 
 export function MacroPulse({ snapshot }: { snapshot: RegimeSnapshot | null }) {
+  const snapshotType: SnapshotType | null = snapshot?.snapshot_type ?? null;
+  const isPremarket = snapshotType === "premarket";
+  const spxLabel = isPremarket ? "ES" : "SPX";
+  const spxSubLabel = isPremarket ? "S&P futures" : "S&P 500";
+  const nasdaqLabel = isPremarket ? "NQ" : "NDX";
+  const nasdaqSubLabel = isPremarket ? "Nasdaq futures" : "Nasdaq 100";
+
   return (
     <div className="card p-5">
       <div className="font-ui text-xs uppercase tracking-[0.3em] text-[var(--text-muted)]">
@@ -11,7 +18,8 @@ export function MacroPulse({ snapshot }: { snapshot: RegimeSnapshot | null }) {
 
       <div className="mt-4 grid grid-cols-3 gap-4">
         <Pillar
-          label="SPX"
+          label={spxLabel}
+          sublabel={spxSubLabel}
           value={snapshot?.spx_price ? fmtPrice(snapshot.spx_price, 0) : "—"}
           changePct={snapshot?.spx_change_pct ?? null}
           subline={
@@ -22,13 +30,15 @@ export function MacroPulse({ snapshot }: { snapshot: RegimeSnapshot | null }) {
           }
         />
         <Pillar
-          label="QQQ"
-          value={snapshot?.qqq_price ? fmtPrice(snapshot.qqq_price, 2) : "—"}
+          label={nasdaqLabel}
+          sublabel={nasdaqSubLabel}
+          value={snapshot?.qqq_price ? fmtPrice(snapshot.qqq_price, 0) : "—"}
           changePct={snapshot?.qqq_change_pct ?? null}
           subline={null}
         />
         <Pillar
           label="VIX"
+          sublabel={null}
           value={
             snapshot?.vix_level !== null && snapshot?.vix_level !== undefined
               ? fmtNumber(snapshot.vix_level, 2)
@@ -53,11 +63,13 @@ export function MacroPulse({ snapshot }: { snapshot: RegimeSnapshot | null }) {
 
 function Pillar({
   label,
+  sublabel,
   value,
   changePct,
   subline,
 }: {
   label: string;
+  sublabel: string | null;
   value: string;
   changePct: number | null;
   subline: React.ReactNode;
@@ -66,6 +78,11 @@ function Pillar({
     <div>
       <div className="font-ui text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
         {label}
+        {sublabel && (
+          <span className="ml-1.5 normal-case tracking-normal text-[var(--text-secondary)]">
+            {sublabel}
+          </span>
+        )}
       </div>
       <div className="mt-1 font-data text-2xl text-[var(--text-primary)]">
         {value}

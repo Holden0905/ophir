@@ -1,10 +1,6 @@
 import "server-only";
 
-import {
-  closes,
-  fetchYahooBatch,
-  fetchYahooSeries,
-} from "@/lib/data/yahoo";
+import { closes, fetchYahooBatch } from "@/lib/data/yahoo";
 import { fetchCoreCrypto, classifyCryptoRegime } from "@/lib/data/coingecko";
 import {
   ema,
@@ -29,10 +25,17 @@ interface MacroPart {
   vsEma21Pct: number | null;
 }
 
-function macroFromCloses(values: number[]): MacroPart {
-  const last = values[values.length - 1] ?? null;
-  const prev = values[values.length - 2] ?? null;
-  const ema21 = ema(values, 21);
+// Builds a macro reading from a "live" series (the one whose last bar
+// represents the print we want to display) and a cash reference series
+// used for the 21 EMA. For pre-market, live = ES/NQ futures and reference
+// = SPX/NDX cash; for EOD, live and reference are the same cash series.
+function macroFromSeries(
+  liveCloses: number[],
+  referenceCloses: number[],
+): MacroPart {
+  const last = liveCloses[liveCloses.length - 1] ?? null;
+  const prev = liveCloses[liveCloses.length - 2] ?? null;
+  const ema21 = ema(referenceCloses, 21);
   return {
     price: last,
     changePct: last !== null && prev !== null ? pctChange(prev, last) : null,
@@ -66,24 +69,45 @@ export interface RegimeBuildResult
   // alias for typing convenience
 }
 
+// en-CA locale formats as YYYY-MM-DD; using America/New_York keeps the
+// snapshot_date aligned with the US trading session even when the server
+// runs in UTC and the brief is generated late in the evening.
+const NY_DATE_FMT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 export async function buildRegimeSnapshot(
   snapshotType: SnapshotType,
   today = new Date(),
 ): Promise<RegimeBuildResult> {
-  const dateStr = today.toISOString().slice(0, 10);
+  const dateStr = NY_DATE_FMT.format(today);
+  const isPremarket = snapshotType === "premarket";
 
-  // Fetch macro + sectors + benchmark in one Yahoo batch.
+  // Pre-market briefs lean on overnight futures so the narrative reflects
+  // current price discovery, not yesterday's cash close. EOD briefs use
+  // the cash indices that have just settled.
+  const spxLiveSymbol = isPremarket
+    ? MACRO_SYMBOLS.esFutures
+    : MACRO_SYMBOLS.spx;
+  const nasdaqLiveSymbol = isPremarket
+    ? MACRO_SYMBOLS.nqFutures
+    : MACRO_SYMBOLS.ndx;
+
   const macroSymbols = [
     MACRO_SYMBOLS.spx,
-    MACRO_SYMBOLS.qqq,
+    MACRO_SYMBOLS.ndx,
     MACRO_SYMBOLS.vix,
+    spxLiveSymbol,
+    nasdaqLiveSymbol,
   ];
   const sectorSymbols = SECTOR_ETFS.map((s) => s.symbol);
-  const allSymbols = [
-    BENCHMARK_SYMBOL,
-    ...macroSymbols,
-    ...sectorSymbols,
-  ];
+  // de-dupe — when not premarket the live symbols equal the cash ones
+  const allSymbols = Array.from(
+    new Set([BENCHMARK_SYMBOL, ...macroSymbols, ...sectorSymbols]),
+  );
 
   const [yahooData, crypto] = await Promise.all([
     fetchYahooBatch(allSymbols, { range: "3mo", interval: "1d" }),
@@ -96,13 +120,15 @@ export async function buildRegimeSnapshot(
     return closes(entry);
   }
 
-  const spxCloses = safeCloses(MACRO_SYMBOLS.spx);
-  const qqqCloses = safeCloses(MACRO_SYMBOLS.qqq);
+  const spxCashCloses = safeCloses(MACRO_SYMBOLS.spx);
+  const ndxCashCloses = safeCloses(MACRO_SYMBOLS.ndx);
+  const spxLiveCloses = safeCloses(spxLiveSymbol);
+  const nasdaqLiveCloses = safeCloses(nasdaqLiveSymbol);
   const vixCloses = safeCloses(MACRO_SYMBOLS.vix);
   const spyCloses = safeCloses(BENCHMARK_SYMBOL);
 
-  const spx = macroFromCloses(spxCloses);
-  const qqq = macroFromCloses(qqqCloses);
+  const spx = macroFromSeries(spxLiveCloses, spxCashCloses);
+  const nasdaq = macroFromSeries(nasdaqLiveCloses, ndxCashCloses);
   const vixLast = vixCloses[vixCloses.length - 1] ?? null;
 
   const sectors: SectorSnapshot[] = SECTOR_ETFS.map((s) => {
@@ -122,8 +148,10 @@ export async function buildRegimeSnapshot(
   const aiInput = {
     snapshot_type: snapshotType,
     date: dateStr,
+    spx_label: isPremarket ? "ES (S&P futures)" : "SPX",
+    nasdaq_label: isPremarket ? "NQ (Nasdaq futures)" : "NDX",
     spx,
-    qqq,
+    nasdaq,
     vix: { level: vixLast, direction: vixDirection(vixCloses) },
     btc: { price: crypto.btc.price, change24h: crypto.btc.change24h },
     eth: { price: crypto.eth.price, change24h: crypto.eth.change24h },
@@ -149,8 +177,8 @@ export async function buildRegimeSnapshot(
     spx_change_pct: spx.changePct,
     spx_vs_ema21_pct: spx.vsEma21Pct,
     spx_trend: spxTrend,
-    qqq_price: qqq.price,
-    qqq_change_pct: qqq.changePct,
+    qqq_price: nasdaq.price,
+    qqq_change_pct: nasdaq.changePct,
     vix_level: vixLast,
     vix_direction: vixDirection(vixCloses),
     vix_flag: vixFlag(vixLast),

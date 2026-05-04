@@ -18,7 +18,9 @@ export const BENCHMARK_SYMBOL = "SPY";
 
 export const MACRO_SYMBOLS = {
   spx: "^GSPC",
-  qqq: "QQQ",
+  ndx: "^NDX",
+  esFutures: "ES=F",
+  nqFutures: "NQ=F",
   vix: "^VIX",
 } as const;
 

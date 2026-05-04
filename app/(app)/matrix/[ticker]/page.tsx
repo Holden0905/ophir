@@ -85,7 +85,7 @@ export default async function StockDetailPage({ params }: PageProps) {
             <h1 className="font-data text-4xl tracking-tight text-[var(--text-primary)]">
               {stock.ticker}
             </h1>
-            <span className="font-editorial text-xl italic text-[var(--text-secondary)]">
+            <span className="font-newspaper text-xl text-[var(--text-secondary)]">
               {stock.company_name ?? ""}
             </span>
           </div>
