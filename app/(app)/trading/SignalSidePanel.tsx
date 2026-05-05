@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { fmtPct, fmtPrice } from "@/lib/format";
 import { ConvictionPills } from "@/components/signals/ConvictionPills";
@@ -100,6 +100,33 @@ export function SignalSidePanel({
     return () => window.removeEventListener("keydown", handler);
   }, [selection, onClose]);
 
+  // Swipe-down to dismiss (mobile). The panel is full-screen on <md, so the
+  // gesture matches the iOS/Android sheet-dismiss convention. We only honor
+  // the gesture when the touch starts on the drag handle / sticky header,
+  // otherwise vertical scrolling inside the panel would be hijacked.
+  const dragStartY = useRef<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const SWIPE_THRESHOLD = 90; // px
+
+  function onTouchStart(e: React.TouchEvent) {
+    dragStartY.current = e.touches[0]?.clientY ?? null;
+    setDragOffset(0);
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    if (dragStartY.current === null) return;
+    const dy = (e.touches[0]?.clientY ?? 0) - dragStartY.current;
+    // Only react to downward motion; upward stays at 0 so the user can't
+    // pull the panel up past its docked position.
+    setDragOffset(Math.max(0, dy));
+  }
+  function onTouchEnd() {
+    if (dragOffset > SWIPE_THRESHOLD) {
+      onClose();
+    }
+    dragStartY.current = null;
+    setDragOffset(0);
+  }
+
   if (!selection) return null;
   const { stock, signal, daily, stockTechnicals } = selection;
   const conditions =
@@ -113,6 +140,12 @@ export function SignalSidePanel({
         null
       : null;
 
+  // Apply the swipe transform only on mobile. Desktop ignores it entirely.
+  const dragStyle =
+    dragOffset > 0
+      ? { transform: `translateY(${dragOffset}px)`, transition: "none" }
+      : { transform: "translateY(0)", transition: "transform 180ms ease-out" };
+
   return (
     <div
       className="fixed inset-0 z-30 bg-black/25"
@@ -120,10 +153,30 @@ export function SignalSidePanel({
       role="presentation"
     >
       <aside
-        className="absolute right-0 top-0 flex h-full w-[68vw] min-w-[640px] max-w-[1280px] flex-col overflow-y-auto border-l border-[var(--border)] bg-[var(--bg-primary)] shadow-2xl"
+        className="absolute right-0 top-0 flex h-full w-full flex-col overflow-y-auto bg-[var(--bg-primary)] shadow-2xl md:w-[68vw] md:min-w-[640px] md:max-w-[1280px] md:border-l md:border-[var(--border)]"
+        style={dragStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--border)] bg-[var(--bg-primary)]/95 p-5 backdrop-blur">
+        {/* Drag handle — mobile only. Touch handlers live on this strip
+            (and the sticky header below) so the panel body can scroll
+            normally without hijacking the gesture. */}
+        <div
+          className="flex shrink-0 justify-center pt-2 pb-1 md:hidden"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <span
+            aria-hidden
+            className="h-1 w-10 rounded-full bg-[var(--border)]"
+          />
+        </div>
+        <header
+          className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--border)] bg-[var(--bg-primary)]/95 p-5 backdrop-blur"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           <div>
             <Link
               href={`/matrix/${encodeURIComponent(stock.ticker)}`}
