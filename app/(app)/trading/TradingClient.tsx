@@ -357,8 +357,8 @@ function SignalRow({
       <button
         type="button"
         onClick={onClick}
-        className={`flex w-full items-center justify-between gap-4 px-5 py-3 text-left transition-colors hover:bg-[var(--bg-elevated)] ${
-          loud ? "bg-[var(--accent-amber)]/[0.04]" : ""
+        className={`group flex w-full cursor-pointer items-center justify-between gap-4 px-5 py-3 text-left transition-colors hover:bg-[var(--bg-elevated)] ${
+          loud ? "bg-[var(--accent-amber)]/[0.04] hover:bg-[var(--accent-amber)]/[0.08]" : ""
         }`}
       >
         <div className="flex min-w-0 flex-1 items-center gap-4">
@@ -399,6 +399,13 @@ function SignalRow({
             {fmtPct(change, 2)}
           </span>
         </div>
+
+        <span
+          aria-hidden
+          className="font-data text-base text-[var(--text-muted)] transition-colors group-hover:text-[var(--accent-amber)]"
+        >
+          ›
+        </span>
       </button>
     </li>
   );

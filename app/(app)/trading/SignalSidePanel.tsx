@@ -115,12 +115,12 @@ export function SignalSidePanel({
 
   return (
     <div
-      className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-30 bg-black/25"
       onClick={onClose}
       role="presentation"
     >
       <aside
-        className="absolute right-0 top-0 flex h-full w-full max-w-[920px] flex-col overflow-y-auto border-l border-[var(--border)] bg-[var(--bg-primary)] shadow-2xl"
+        className="absolute right-0 top-0 flex h-full w-[68vw] min-w-[640px] max-w-[1280px] flex-col overflow-y-auto border-l border-[var(--border)] bg-[var(--bg-primary)] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--border)] bg-[var(--bg-primary)]/95 p-5 backdrop-blur">
