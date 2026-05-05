@@ -11,7 +11,7 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen">
       <Nav email={user.email ?? null} />
-      <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
+      <main className="mx-auto max-w-7xl px-5 py-8 pb-24 md:pb-8">{children}</main>
       <InstallPrompt />
     </div>
   );
