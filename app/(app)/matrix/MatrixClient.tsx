@@ -1,17 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   fmtMarketCap,
   fmtPct,
+  fmtPrice,
   fmtRatio,
   pctClass,
 } from "@/lib/format";
 import { AddStockModal } from "@/components/matrix/AddStockModal";
+import { SignalBadge } from "@/components/signals/SignalBadge";
+import { ConvictionPills } from "@/components/signals/ConvictionPills";
+import {
+  SETUP_FULL,
+  compareSignalState,
+  dominantSignal,
+} from "@/lib/signals/labels";
 import { updateStock } from "./actions";
 import type { MatrixRow } from "./page";
+import type { SignalState } from "@/lib/supabase/types";
 
 type Filter = "all" | "interested" | "positions";
 
@@ -22,15 +31,17 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState(false);
   const [refreshing, startRefresh] = useTransition();
+  // Sort by Setup column when active; null falls back to ticker order from
+  // the server. We don't expose sort handles on other columns yet.
+  const [setupSort, setSetupSort] = useState<"desc" | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
-  // Sync prop → state when the server re-fetches (after add / refresh /
-  // toggle). Without this, optimistic local state would mask new rows.
   useEffect(() => {
     setRows(initialRows);
   }, [initialRows]);
 
   const visible = useMemo(() => {
-    return rows.filter((r) => {
+    const filtered = rows.filter((r) => {
       if (filter === "interested" && !r.stock.is_interested) return false;
       if (filter === "positions" && !r.stock.is_position) return false;
       if (search) {
@@ -44,7 +55,21 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
       }
       return true;
     });
-  }, [rows, search, filter]);
+
+    if (setupSort === "desc") {
+      // Triggered first, then qualifies, then none (alphabetic within).
+      return [...filtered].sort((a, b) => {
+        const aSig = dominantSignal(a.signals);
+        const bSig = dominantSignal(b.signals);
+        const aState: SignalState = aSig?.state ?? "none";
+        const bState: SignalState = bSig?.state ?? "none";
+        const cmp = compareSignalState(aState, bState);
+        if (cmp !== 0) return cmp;
+        return a.stock.ticker.localeCompare(b.stock.ticker);
+      });
+    }
+    return filtered;
+  }, [rows, search, filter, setupSort]);
 
   const [refreshError, setRefreshError] = useState<string | null>(null);
 
@@ -71,7 +96,6 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
         };
         if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
 
-        // Surface any per-ticker errors (technicals failure or fundamentals error).
         const failed = Object.entries(json.results ?? {})
           .filter(
             ([, r]) =>
@@ -92,6 +116,10 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
         router.refresh();
       }
     });
+  }
+
+  function toggleSetupSort() {
+    setSetupSort((prev) => (prev === "desc" ? null : "desc"));
   }
 
   return (
@@ -162,11 +190,26 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
         </div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left text-sm">
+          <table className="w-full min-w-[1180px] text-left text-sm">
             <thead className="border-b border-[var(--border)] font-ui text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
               <tr>
                 <th className="px-3 py-2">Ticker</th>
                 <th className="px-3 py-2">Name</th>
+                <th className="px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={toggleSetupSort}
+                    className={`flex items-center gap-1 uppercase tracking-wider hover:text-[var(--accent-amber)] ${
+                      setupSort ? "text-[var(--accent-amber)]" : ""
+                    }`}
+                    title="Sort by setup state"
+                  >
+                    Setup
+                    <span aria-hidden className="text-[8px]">
+                      {setupSort === "desc" ? "▼" : "↕"}
+                    </span>
+                  </button>
+                </th>
                 <th className="px-3 py-2">BLC</th>
                 <th className="px-3 py-2 text-right">MktCap</th>
                 <th className="px-3 py-2 text-right">Q/Q Rev</th>
@@ -183,27 +226,35 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
             </thead>
             <tbody>
               {visible.map((r) => (
-                <Row
-                  key={r.stock.id}
-                  row={r}
-                  onToggle={(field) => {
-                    const next = rows.map((rr) =>
-                      rr.stock.id === r.stock.id
-                        ? {
-                            ...rr,
-                            stock: {
-                              ...rr.stock,
-                              [field]: !rr.stock[field],
-                            } as typeof rr.stock,
-                          }
-                        : rr,
-                    );
-                    setRows(next);
-                    void updateStock(r.stock.id, {
-                      [field]: !r.stock[field],
-                    } as never);
-                  }}
-                />
+                <Fragment key={r.stock.id}>
+                  <Row
+                    row={r}
+                    expanded={expanded === r.stock.id}
+                    onToggleExpand={() =>
+                      setExpanded((prev) =>
+                        prev === r.stock.id ? null : r.stock.id,
+                      )
+                    }
+                    onToggle={(field) => {
+                      const next = rows.map((rr) =>
+                        rr.stock.id === r.stock.id
+                          ? {
+                              ...rr,
+                              stock: {
+                                ...rr.stock,
+                                [field]: !rr.stock[field],
+                              } as typeof rr.stock,
+                            }
+                          : rr,
+                      );
+                      setRows(next);
+                      void updateStock(r.stock.id, {
+                        [field]: !r.stock[field],
+                      } as never);
+                    }}
+                  />
+                  {expanded === r.stock.id && <SetupExpansion row={r} />}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -217,10 +268,14 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
 
 function Row({
   row,
+  expanded,
   onToggle,
+  onToggleExpand,
 }: {
   row: MatrixRow;
+  expanded: boolean;
   onToggle: (field: "is_position" | "is_interested") => void;
+  onToggleExpand: () => void;
 }) {
   const f = row.fundamentals;
   const t = row.technicals;
@@ -228,9 +283,14 @@ function Row({
     f?.net_margin && f?.gross_margin && f.gross_margin > 0
       ? f.net_margin / f.gross_margin
       : null;
+  const dominant = dominantSignal(row.signals);
 
   return (
-    <tr className="border-b border-[var(--border-subtle)] transition-colors hover:bg-[var(--bg-elevated)]">
+    <tr
+      className={`border-b border-[var(--border-subtle)] transition-colors hover:bg-[var(--bg-elevated)] ${
+        expanded ? "bg-[var(--bg-elevated)]" : ""
+      }`}
+    >
       <td className="px-3 py-2">
         <Link
           href={`/matrix/${encodeURIComponent(row.stock.ticker)}`}
@@ -243,6 +303,21 @@ function Row({
         <span className="line-clamp-1 max-w-[18ch]">
           {row.stock.company_name ?? f?.ticker ?? "—"}
         </span>
+      </td>
+      <td className="px-3 py-2">
+        {dominant ? (
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            aria-expanded={expanded}
+            className="flex items-center gap-1.5"
+            title={`${SETUP_FULL[dominant.setup_type]} — ${dominant.state.replace("_", " ")}`}
+          >
+            <SignalBadge setup={dominant.setup_type} state={dominant.state} />
+          </button>
+        ) : (
+          <span className="text-[var(--text-muted)]">—</span>
+        )}
       </td>
       <td className="px-3 py-2 font-ui text-xs">
         {row.stock.blc_phase ? (
@@ -305,6 +380,116 @@ function Row({
         </button>
       </td>
     </tr>
+  );
+}
+
+function SetupExpansion({ row }: { row: MatrixRow }) {
+  const dominant = dominantSignal(row.signals);
+  if (!dominant) return null;
+  const d = row.daily;
+  const closeVsEma8 =
+    d?.close !== null &&
+    d?.close !== undefined &&
+    d?.ema_8 !== null &&
+    d?.ema_8 !== undefined &&
+    d.ema_8 !== 0
+      ? ((d.close - d.ema_8) / d.ema_8) * 100
+      : null;
+  const volVsAvg =
+    d?.volume !== null &&
+    d?.volume !== undefined &&
+    d?.avg_volume_20 !== null &&
+    d?.avg_volume_20 !== undefined &&
+    d.avg_volume_20 !== 0
+      ? d.volume / d.avg_volume_20
+      : null;
+
+  return (
+    <tr className="border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+      <td colSpan={15} className="px-5 py-4">
+        <div className="grid gap-5 lg:grid-cols-[1fr_2fr]">
+          <div>
+            <div className="font-ui text-[10px] uppercase tracking-[0.3em] text-[var(--text-muted)]">
+              {SETUP_FULL[dominant.setup_type]}
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <SignalBadge
+                setup={dominant.setup_type}
+                state={dominant.state}
+              />
+              <span className="font-ui text-xs text-[var(--text-secondary)]">
+                {dominant.state === "triggered_today"
+                  ? "Triggered today"
+                  : "Qualifies"}
+              </span>
+            </div>
+            {dominant.cooled_until && (
+              <div className="mt-2 font-ui text-[11px] text-[var(--text-muted)]">
+                Cooled until {dominant.cooled_until}
+              </div>
+            )}
+            {dominant.conviction_grades.length > 0 && (
+              <div className="mt-3">
+                <ConvictionPills grades={dominant.conviction_grades} size="xs" />
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+            <Stat label="Close" value={fmtPrice(d?.close ?? null)} />
+            <Stat
+              label="vs 8 EMA"
+              value={fmtPct(closeVsEma8)}
+              tone={closeVsEma8}
+            />
+            <Stat
+              label="RSI(14)"
+              value={
+                d?.rsi_14 !== null && d?.rsi_14 !== undefined
+                  ? d.rsi_14.toFixed(1)
+                  : "—"
+              }
+            />
+            <Stat
+              label="Vol vs 20d avg"
+              value={
+                volVsAvg !== null
+                  ? `${volVsAvg.toFixed(2)}×`
+                  : "—"
+              }
+              tone={volVsAvg !== null ? volVsAvg - 1 : null}
+            />
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: number | null;
+}) {
+  const cls =
+    tone === undefined || tone === null
+      ? ""
+      : tone > 0
+        ? "value-up"
+        : tone < 0
+          ? "value-down"
+          : "";
+  return (
+    <div>
+      <div className="font-ui text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+        {label}
+      </div>
+      <div className={`mt-1 font-data text-sm ${cls}`}>{value}</div>
+    </div>
   );
 }
 

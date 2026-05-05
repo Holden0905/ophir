@@ -7,6 +7,7 @@ import { signout } from "@/app/(auth)/actions";
 const ITEMS = [
   { href: "/dashboard", label: "Regime" },
   { href: "/matrix", label: "Matrix" },
+  { href: "/trading", label: "Trading" },
   { href: "/discovery", label: "Discovery" },
   { href: "/settings", label: "Settings" },
 ];

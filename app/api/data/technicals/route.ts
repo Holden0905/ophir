@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     | "2y"
     | "5y";
   const interval = (request.nextUrl.searchParams.get("interval") ?? "1d") as
+    | "60m"
     | "1d"
     | "1wk"
     | "1mo";

@@ -54,7 +54,7 @@ export interface YahooSeries {
 }
 
 type Range = "5d" | "1mo" | "3mo" | "6mo" | "1y" | "2y" | "5y";
-type Interval = "1d" | "1wk" | "1mo";
+type Interval = "60m" | "1d" | "1wk" | "1mo";
 
 function rangeStart(range: Range): Date {
   const now = new Date();
