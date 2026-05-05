@@ -10,6 +10,19 @@ export type RegimeClassification =
 export type SnapshotType = "premarket" | "eod";
 export type ScanMode = "reversal" | "trend";
 
+export type SetupType = "trend_continuation" | "reversal_recovery";
+export type SignalState = "triggered_today" | "qualifies" | "none";
+
+export type TrendConvictionGrade =
+  | "high_volume"
+  | "mature_trend"
+  | "sector_tailwind";
+export type ReversalConvictionGrade =
+  | "high_volume"
+  | "accumulation"
+  | "trend_reversal_forming";
+export type ConvictionGrade = TrendConvictionGrade | ReversalConvictionGrade;
+
 export interface SectorSnapshot {
   symbol: string;
   name: string;
@@ -137,6 +150,33 @@ export interface DiscoveryScan {
   scan_mode: ScanMode;
   results: DiscoveryScanResult[];
   narrative: string | null;
+  created_at: string;
+}
+
+export interface DailyTechnicals {
+  id: string;
+  ticker: string;
+  date: string; // YYYY-MM-DD
+  close: number | null;
+  volume: number | null;
+  ema_5: number | null;
+  ema_8: number | null;
+  ema_21: number | null;
+  sma_50: number | null;
+  rsi_14: number | null;
+  avg_volume_20: number | null;
+  created_at: string;
+}
+
+export interface Signal {
+  id: string;
+  ticker: string;
+  date: string; // YYYY-MM-DD
+  setup_type: SetupType;
+  state: SignalState;
+  conviction_grades: ConvictionGrade[];
+  triggered_at: string | null;
+  cooled_until: string | null;
   created_at: string;
 }
 
@@ -320,6 +360,41 @@ export type Database = {
           narrative?: string | null;
           created_at?: string;
         };
+        Relationships: [];
+      };
+      daily_technicals: {
+        Row: DailyTechnicals;
+        Insert: {
+          id?: string;
+          ticker: string;
+          date: string;
+          close?: number | null;
+          volume?: number | null;
+          ema_5?: number | null;
+          ema_8?: number | null;
+          ema_21?: number | null;
+          sma_50?: number | null;
+          rsi_14?: number | null;
+          avg_volume_20?: number | null;
+          created_at?: string;
+        };
+        Update: Partial<DailyTechnicals>;
+        Relationships: [];
+      };
+      signals: {
+        Row: Signal;
+        Insert: {
+          id?: string;
+          ticker: string;
+          date: string;
+          setup_type: SetupType;
+          state: SignalState;
+          conviction_grades?: ConvictionGrade[];
+          triggered_at?: string | null;
+          cooled_until?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Signal>;
         Relationships: [];
       };
     };
