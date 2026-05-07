@@ -9,8 +9,10 @@ import {
   fmtPrice,
   fmtRatio,
   pctClass,
+  relativeTime,
 } from "@/lib/format";
 import { AddStockModal } from "@/components/matrix/AddStockModal";
+import { Spinner } from "@/components/shared/Spinner";
 import { SignalBadge } from "@/components/signals/SignalBadge";
 import { ConvictionPills } from "@/components/signals/ConvictionPills";
 import {
@@ -24,6 +26,14 @@ import type { SignalState } from "@/lib/supabase/types";
 
 type Filter = "all" | "interested" | "positions";
 
+interface LiveQuote {
+  price: number | null;
+  change_pct: number | null;
+  volume: number | null;
+}
+
+const QUOTE_POLL_MS = 60_000;
+
 export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
   const router = useRouter();
   const [rows, setRows] = useState(initialRows);
@@ -31,6 +41,11 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState(false);
   const [refreshing, startRefresh] = useTransition();
+  const [quotes, setQuotes] = useState<Record<string, LiveQuote>>({});
+  const [quotesAt, setQuotesAt] = useState<string | null>(null);
+  // useState init runs on every render but the function form runs once;
+  // we use a tick counter solely to re-render the "x seconds ago" stamp.
+  const [, setNowTick] = useState(0);
   // Sort by Setup column when active; null falls back to ticker order from
   // the server. We don't expose sort handles on other columns yet.
   const [setupSort, setSetupSort] = useState<"desc" | null>(null);
@@ -39,6 +54,51 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
   useEffect(() => {
     setRows(initialRows);
   }, [initialRows]);
+
+  // Live quote polling — every 60s, ask /api/stocks/quotes for fresh price /
+  // change / volume per ticker. Only runs while the tab is visible so we
+  // don't burn Yahoo quota for a backgrounded page.
+  const tickerKey = useMemo(
+    () => initialRows.map((r) => r.stock.ticker).sort().join(","),
+    [initialRows],
+  );
+  useEffect(() => {
+    if (!tickerKey) return;
+    let cancelled = false;
+    async function load() {
+      if (typeof document !== "undefined" && document.hidden) return;
+      try {
+        const res = await fetch(
+          `/api/stocks/quotes?tickers=${encodeURIComponent(tickerKey)}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const j = (await res.json()) as {
+          quotes: Record<string, LiveQuote>;
+          fetched_at: string;
+        };
+        if (cancelled) return;
+        setQuotes(j.quotes);
+        setQuotesAt(j.fetched_at);
+      } catch {
+        // Silent — the cached server-side prices are still rendered as a
+        // fallback. A failed poll shouldn't blank the table.
+      }
+    }
+    void load();
+    const id = window.setInterval(load, QUOTE_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [tickerKey]);
+
+  // Tick the "last updated" stamp once a second so the relative time stays
+  // honest (otherwise it'd only update on the 60s poll).
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const visible = useMemo(() => {
     const filtered = rows.filter((r) => {
@@ -156,12 +216,23 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
               </button>
             ))}
           </div>
+          <span
+            className="font-ui text-[10px] uppercase tracking-wider text-[var(--text-muted)]"
+            title={
+              quotesAt ? `Live quotes fetched ${new Date(quotesAt).toLocaleString()}` : undefined
+            }
+          >
+            {quotesAt
+              ? `Live · ${relativeTime(quotesAt)}`
+              : "Live · loading…"}
+          </span>
           <button
             type="button"
             onClick={refreshAll}
             disabled={refreshing || rows.length === 0}
-            className={`rounded border border-[var(--border)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--accent-amber)] disabled:opacity-50 ${refreshing ? "pulse-amber" : ""}`}
+            className={`inline-flex items-center gap-1.5 rounded border border-[var(--border)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--accent-amber)] disabled:opacity-50 ${refreshing ? "pulse-amber" : ""}`}
           >
+            {refreshing && <Spinner size={12} />}
             {refreshing ? "Refreshing…" : "Refresh data"}
           </button>
           <button
@@ -190,10 +261,11 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
         </div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="w-full min-w-[1180px] text-left text-sm">
+          <table className="w-full min-w-[1280px] text-left text-sm">
             <thead className="border-b border-[var(--border)] font-ui text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
               <tr>
                 <th className="px-3 py-2">Ticker</th>
+                <th className="px-3 py-2 text-right">Price</th>
                 <th className="px-3 py-2">Name</th>
                 <th className="px-3 py-2">
                   <button
@@ -229,6 +301,7 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
                 <Fragment key={r.stock.id}>
                   <Row
                     row={r}
+                    quote={quotes[r.stock.ticker] ?? null}
                     expanded={expanded === r.stock.id}
                     onToggleExpand={() =>
                       setExpanded((prev) =>
@@ -268,11 +341,13 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
 
 function Row({
   row,
+  quote,
   expanded,
   onToggle,
   onToggleExpand,
 }: {
   row: MatrixRow;
+  quote: LiveQuote | null;
   expanded: boolean;
   onToggle: (field: "is_position" | "is_interested") => void;
   onToggleExpand: () => void;
@@ -284,6 +359,10 @@ function Row({
       ? f.net_margin / f.gross_margin
       : null;
   const dominant = dominantSignal(row.signals);
+
+  // Live quote takes precedence over the cached technicals row when available.
+  const price = quote?.price ?? t?.current_price ?? null;
+  const change = quote?.change_pct ?? t?.price_change_pct ?? null;
 
   return (
     <tr
@@ -298,6 +377,14 @@ function Row({
         >
           {row.stock.ticker}
         </Link>
+      </td>
+      <td className="px-3 py-2 text-right">
+        <div className="font-data text-sm text-[var(--text-primary)]">
+          {fmtPrice(price)}
+        </div>
+        <div className={`font-data text-[11px] ${pctClass(change)}`}>
+          {fmtPct(change, 2)}
+        </div>
       </td>
       <td className="px-3 py-2 font-ui text-[var(--text-secondary)]">
         <span className="line-clamp-1 max-w-[18ch]">
@@ -406,7 +493,7 @@ function SetupExpansion({ row }: { row: MatrixRow }) {
 
   return (
     <tr className="border-b border-[var(--border)] bg-[var(--bg-secondary)]">
-      <td colSpan={15} className="px-5 py-4">
+      <td colSpan={16} className="px-5 py-4">
         <div className="grid gap-5 lg:grid-cols-[1fr_2fr]">
           <div>
             <div className="font-ui text-[10px] uppercase tracking-[0.3em] text-[var(--text-muted)]">

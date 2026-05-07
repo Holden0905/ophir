@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/shared/Spinner";
 import { addStock } from "@/app/(app)/matrix/actions";
 import { BLC_PHASES } from "@/lib/calculations/blc";
 
@@ -103,8 +104,9 @@ export function AddStockModal({
           <button
             type="submit"
             disabled={pending}
-            className={`w-full rounded bg-[var(--accent-amber)] px-3 py-2 font-ui text-sm font-medium text-black hover:opacity-90 disabled:opacity-50 ${pending ? "pulse-amber" : ""}`}
+            className={`inline-flex w-full items-center justify-center gap-2 rounded bg-[var(--accent-amber)] px-3 py-2 font-ui text-sm font-medium text-black hover:opacity-90 disabled:opacity-50 ${pending ? "pulse-amber" : ""}`}
           >
+            {pending && <Spinner size={14} />}
             {pending ? "Adding…" : "Add to matrix"}
           </button>
         </form>

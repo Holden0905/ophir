@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/shared/Spinner";
 import {
   deleteAccount,
   generateInviteCode,
@@ -85,8 +86,9 @@ export function SettingsClient({
           <button
             type="submit"
             disabled={savingName}
-            className="rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50"
           >
+            {savingName && <Spinner size={11} />}
             {savingName ? "Saving…" : "Save"}
           </button>
         </form>
@@ -106,9 +108,10 @@ export function SettingsClient({
             type="button"
             onClick={newInvite}
             disabled={savingInvite}
-            className="rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50"
           >
-            {savingInvite ? "…" : "Generate"}
+            {savingInvite && <Spinner size={11} />}
+            {savingInvite ? "Generating…" : "Generate"}
           </button>
         </div>
 

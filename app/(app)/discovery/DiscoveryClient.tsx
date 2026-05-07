@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/shared/Spinner";
 import { fmtPct, fmtPrice, pctClass, relativeTime } from "@/lib/format";
 import type { DiscoveryScan, ScanMode } from "@/lib/supabase/types";
 import { addStockByTicker } from "../matrix/actions";
@@ -104,8 +105,9 @@ export function DiscoveryClient({
             type="button"
             onClick={runScan}
             disabled={pending}
-            className={`rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50 ${pending ? "pulse-amber" : ""}`}
+            className={`inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50 ${pending ? "pulse-amber" : ""}`}
           >
+            {pending && <Spinner size={12} />}
             {pending ? "Scanning the universe…" : "Run scan"}
           </button>
         </div>
@@ -288,13 +290,14 @@ function AddToMatrixButton({ ticker }: { ticker: string }) {
       type="button"
       disabled={pending || done}
       onClick={add}
-      className={`rounded border border-[var(--border)] px-2 py-1 font-ui text-[10px] uppercase tracking-wider transition-colors ${
+      className={`inline-flex items-center gap-1 rounded border border-[var(--border)] px-2 py-1 font-ui text-[10px] uppercase tracking-wider transition-colors ${
         done
           ? "border-[var(--accent-amber-dim)] text-[var(--accent-amber)]"
           : "text-[var(--text-secondary)] hover:text-[var(--accent-amber)]"
       }`}
     >
-      {done ? "added" : pending ? "…" : "+ matrix"}
+      {pending && <Spinner size={10} />}
+      {done ? "added" : pending ? "Adding…" : "+ matrix"}
     </button>
   );
 }

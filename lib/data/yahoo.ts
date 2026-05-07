@@ -182,6 +182,64 @@ export async function fetchYahooQuarterlyRevenueGrowth(
   return (current - previous) / previous;
 }
 
+// Lightweight quote — current price, daily change, volume — for live
+// polling on the matrix. Avoids the chart endpoint's full bar history
+// since we only need the four fields below per ticker.
+export interface YahooQuote {
+  symbol: string;
+  price: number | null;
+  previousClose: number | null;
+  changePct: number | null;
+  volume: number | null;
+}
+
+export async function fetchYahooQuotes(
+  symbols: string[],
+): Promise<Record<string, YahooQuote | { error: string }>> {
+  const out: Record<string, YahooQuote | { error: string }> = {};
+  if (symbols.length === 0) return out;
+  try {
+    const rows = (await yahooFinance.quote(symbols, undefined, {
+      validateResult: false,
+    })) as Array<{
+      symbol?: string;
+      regularMarketPrice?: number | null;
+      regularMarketPreviousClose?: number | null;
+      regularMarketChangePercent?: number | null;
+      regularMarketVolume?: number | null;
+    }>;
+    for (const r of rows ?? []) {
+      const sym = r.symbol;
+      if (!sym) continue;
+      const price = r.regularMarketPrice ?? null;
+      const prev = r.regularMarketPreviousClose ?? null;
+      out[sym] = {
+        symbol: sym,
+        price,
+        previousClose: prev,
+        changePct:
+          r.regularMarketChangePercent !== null &&
+          r.regularMarketChangePercent !== undefined &&
+          Number.isFinite(r.regularMarketChangePercent)
+            ? r.regularMarketChangePercent
+            : null,
+        volume: r.regularMarketVolume ?? null,
+      };
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    for (const s of symbols) out[s] = { error: msg };
+    return out;
+  }
+  // Yahoo sometimes returns a subset of the requested tickers; backfill any
+  // missing ones with an explicit null marker so callers can distinguish
+  // "didn't try" from "tried but Yahoo had no quote."
+  for (const s of symbols) {
+    if (!(s in out)) out[s] = { error: "no quote returned" };
+  }
+  return out;
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**

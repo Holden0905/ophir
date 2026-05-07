@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/shared/Spinner";
 import type { SnapshotType } from "@/lib/supabase/types";
 
 export function GenerateBriefButton() {
@@ -55,9 +56,10 @@ export function GenerateBriefButton() {
         type="button"
         disabled={pending}
         onClick={generate}
-        className={`mt-3 w-full rounded bg-[var(--accent-amber)] px-3 py-2 font-ui text-sm font-medium text-black transition-opacity hover:opacity-90 disabled:opacity-50 ${pending ? "pulse-amber" : ""}`}
+        className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded bg-[var(--accent-amber)] px-3 py-2 font-ui text-sm font-medium text-black transition-opacity hover:opacity-90 disabled:opacity-50 ${pending ? "pulse-amber" : ""}`}
       >
-        {pending ? "Reading the tape…" : "Generate new brief"}
+        {pending && <Spinner size={14} />}
+        {pending ? "Generating brief…" : "Generate new brief"}
       </button>
       {error && (
         <p className="mt-2 font-ui text-xs text-[var(--accent-red)]">
