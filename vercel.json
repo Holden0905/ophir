@@ -2,8 +2,24 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
+      "path": "/api/cron/regime?type=premarket",
+      "schedule": "0 13 * * 1-5"
+    },
+    {
+      "path": "/api/cron/regime?type=eod",
+      "schedule": "30 21 * * 1-5"
+    },
+    {
+      "path": "/api/cron/refresh-stocks",
+      "schedule": "45 21 * * 1-5"
+    },
+    {
       "path": "/api/cron/signals",
       "schedule": "0 22 * * 1-5"
+    },
+    {
+      "path": "/api/cron/discovery",
+      "schedule": "10 22 * * 1-5"
     }
   ]
 }
