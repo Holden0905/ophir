@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { fmtPct, fmtPrice } from "@/lib/format";
 import { ConvictionPills } from "@/components/signals/ConvictionPills";
@@ -128,6 +129,10 @@ export function SignalSidePanel({
   }
 
   if (!selection) return null;
+  // Portal to document.body so the panel escapes <main>'s stacking context
+  // (main has z-index: 1 in globals.css, which would otherwise trap z-30
+  // below the sticky nav at z-20 and cover the back button on mobile).
+  if (typeof document === "undefined") return null;
   const { stock, signal, daily, stockTechnicals } = selection;
   const conditions =
     signal.setup_type === "trend_continuation"
@@ -146,7 +151,7 @@ export function SignalSidePanel({
       ? { transform: `translateY(${dragOffset}px)`, transition: "none" }
       : { transform: "translateY(0)", transition: "transform 180ms ease-out" };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-30 bg-black/25"
       onClick={onClose}
@@ -307,7 +312,8 @@ export function SignalSidePanel({
           </div>
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
