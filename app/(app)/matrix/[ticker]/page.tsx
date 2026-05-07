@@ -77,9 +77,13 @@ export default async function StockDetailPage({ params }: PageProps) {
         <div>
           <Link
             href="/matrix"
-            className="font-ui text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--accent-amber)]"
+            aria-label="Back to Matrix"
+            className="-ml-2 inline-flex min-h-[44px] items-center gap-1.5 rounded px-2 py-1 font-ui text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--accent-amber)]"
           >
-            ← Matrix
+            <span aria-hidden className="font-data text-lg leading-none">
+              ←
+            </span>
+            <span className="uppercase tracking-wider text-xs">Matrix</span>
           </Link>
           <div className="mt-2 flex items-baseline gap-3">
             <h1 className="font-data text-4xl tracking-tight text-[var(--text-primary)]">

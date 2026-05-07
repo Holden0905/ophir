@@ -172,12 +172,37 @@ export function SignalSidePanel({
           />
         </div>
         <header
-          className="sticky top-0 z-10 flex items-start justify-between border-b border-[var(--border)] bg-[var(--bg-primary)]/95 p-5 backdrop-blur"
+          className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--bg-primary)]/95 backdrop-blur"
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          <div>
+          {/* Top row: back button on the left so it's the first thing the eye
+              (and thumb) hits. The button is full-height-tappable on mobile
+              and stays consistent with how the Matrix detail page returns. */}
+          <div className="flex items-center justify-between gap-2 px-3 pt-3 sm:px-5">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Back to Trading"
+              className="-ml-1 inline-flex min-h-[44px] items-center gap-1.5 rounded px-2 py-1 font-ui text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--accent-amber)]"
+            >
+              <span aria-hidden className="font-data text-lg leading-none">
+                ←
+              </span>
+              <span className="uppercase tracking-wider text-xs">Back</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close panel"
+              className="-mr-1 inline-flex h-11 w-11 items-center justify-center rounded font-data text-xl leading-none text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--accent-amber)]"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="px-5 pb-5">
             <Link
               href={`/matrix/${encodeURIComponent(stock.ticker)}`}
               className="font-data text-2xl font-medium text-[var(--text-primary)] hover:text-[var(--accent-amber)]"
@@ -222,14 +247,6 @@ export function SignalSidePanel({
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close panel"
-            className="rounded p-1 font-ui text-xl leading-none text-[var(--text-muted)] hover:text-[var(--accent-amber)]"
-          >
-            ×
-          </button>
         </header>
 
         <div className="space-y-5 p-5">
