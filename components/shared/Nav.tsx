@@ -104,6 +104,16 @@ export function Nav({ email }: { email: string | null }) {
               </span>
             )}
             <Link
+              href="/about"
+              className={`hidden font-ui text-xs uppercase tracking-wider transition-colors md:inline ${
+                pathname.startsWith("/about")
+                  ? "text-[var(--accent-amber)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--accent-amber)]"
+              }`}
+            >
+              About
+            </Link>
+            <Link
               href="/settings"
               aria-label="Settings"
               className={`rounded p-1.5 transition-colors ${

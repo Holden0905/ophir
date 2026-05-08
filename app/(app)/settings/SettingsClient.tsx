@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/shared/Spinner";
 import {
@@ -93,6 +94,24 @@ export function SettingsClient({
           </button>
         </form>
       </div>
+
+      <Link
+        href="/about"
+        className="card flex items-center justify-between p-5 transition-colors hover:border-[var(--accent-amber-dim)]"
+      >
+        <div>
+          <div className="font-ui text-xs uppercase tracking-[0.3em] text-[var(--text-muted)]">
+            About Ophir
+          </div>
+          <p className="mt-1 font-ui text-sm text-[var(--text-secondary)]">
+            The trading framework, signal logic, and what every Matrix
+            column means.
+          </p>
+        </div>
+        <span aria-hidden className="font-data text-xl text-[var(--text-muted)]">
+          →
+        </span>
+      </Link>
 
       <div className="card p-5">
         <div className="flex items-center justify-between">
