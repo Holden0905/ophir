@@ -1,11 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { MacroPulse } from "@/components/regime/MacroPulse";
-import { CryptoBarometer } from "@/components/regime/CryptoBarometer";
-import { SectorRotation } from "@/components/regime/SectorRotation";
 import { RegimeBadge } from "@/components/regime/RegimeBadge";
 import { RegimeNarrative } from "@/components/regime/RegimeNarrative";
 import { RegimeLegend } from "@/components/regime/RegimeLegend";
 import { GenerateBriefButton } from "@/components/regime/GenerateBriefButton";
+import { DashboardLive } from "./DashboardLive";
 import { relativeTime } from "@/lib/format";
 import type { RegimeSnapshot } from "@/lib/supabase/types";
 
@@ -22,15 +20,10 @@ export default async function DashboardPage() {
 
   const list = (snapshots ?? []) as RegimeSnapshot[];
   const latest = list[0] ?? null;
-  const sectors = (latest?.sector_data ?? []) as RegimeSnapshot["sector_data"];
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-      <div className="space-y-6">
-        <MacroPulse snapshot={latest} />
-        <CryptoBarometer snapshot={latest} />
-        <SectorRotation sectors={sectors ?? []} />
-      </div>
+      <DashboardLive snapshot={latest} />
 
       <div className="space-y-6">
         <RegimeBadge
