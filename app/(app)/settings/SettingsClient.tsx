@@ -10,6 +10,7 @@ import {
   updateDisplayName,
 } from "./actions";
 import { relativeTime } from "@/lib/format";
+import { HealthPanel } from "./HealthPanel";
 import type { InviteCode } from "@/lib/supabase/types";
 
 export function SettingsClient({
@@ -94,6 +95,8 @@ export function SettingsClient({
           </button>
         </form>
       </div>
+
+      <HealthPanel />
 
       <Link
         href="/about"

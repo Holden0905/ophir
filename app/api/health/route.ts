@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 interface FeedStatus {
   last_updated: string | null;
   age_minutes: number | null;
+  budget_minutes: number;
   rows: number;
   fresh: boolean | null;
 }
@@ -97,6 +98,7 @@ export async function GET() {
     return {
       last_updated: last,
       ...freshness(last, budget),
+      budget_minutes: budget,
       rows: rows ?? 0,
     };
   }
