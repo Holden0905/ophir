@@ -202,7 +202,10 @@ export function DashboardLive({
       </div>
       <MacroPulse snapshot={displaySnapshot} />
       <CryptoBarometer snapshot={displaySnapshot} />
-      <SectorRotation sectors={displaySectors} />
+      <SectorRotation
+        sectors={displaySectors}
+        asOf={snapshot?.created_at ?? null}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { fmtPct, pctClass } from "@/lib/format";
+import { fmtPct, pctClass, relativeTime } from "@/lib/format";
 import type { SectorSnapshot } from "@/lib/supabase/types";
 
 // Display-only short names so every row fits on one line. The full names
@@ -12,7 +12,17 @@ const SECTOR_SHORT_NAMES: Record<string, string> = {
   XLP: "Cons. Staples",
 };
 
-export function SectorRotation({ sectors }: { sectors: SectorSnapshot[] }) {
+export function SectorRotation({
+  sectors,
+  asOf,
+}: {
+  sectors: SectorSnapshot[];
+  // ISO timestamp of the snapshot whose rs5d/rs30d values these are. The
+  // card surfaces it so the user knows whether the rotation view is from
+  // today's close or from an earlier session — separate from the
+  // intraday "Live · Xs ago" stamp at the page level.
+  asOf?: string | null;
+}) {
   const [view, setView] = useState<"5d" | "30d">("5d");
 
   if (!sectors || sectors.length === 0) {
@@ -55,8 +65,18 @@ export function SectorRotation({ sectors }: { sectors: SectorSnapshot[] }) {
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between">
-        <div className="font-ui text-xs uppercase tracking-[0.3em] text-[var(--text-muted)]">
-          Sector Rotation
+        <div className="flex items-baseline gap-2">
+          <div className="font-ui text-xs uppercase tracking-[0.3em] text-[var(--text-muted)]">
+            Sector Rotation
+          </div>
+          {asOf && (
+            <span
+              className="font-ui text-[10px] text-[var(--text-muted)]"
+              title={`Snapshot generated ${new Date(asOf).toLocaleString()}`}
+            >
+              · snapshot {relativeTime(asOf)}
+            </span>
+          )}
         </div>
         <div className="flex gap-1 rounded bg-[var(--bg-elevated)] p-0.5 text-xs font-ui">
           {(["5d", "30d"] as const).map((v) => (

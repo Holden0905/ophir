@@ -135,6 +135,24 @@ export function closes(series: YahooSeries): number[] {
     .filter((v): v is number => v !== null && Number.isFinite(v));
 }
 
+// YYYY-MM-DD (in NY time) of the most recent bar in a series. Returns null
+// when the series is empty. Used to detect Yahoo lag — the chart endpoint
+// can take 30-60 minutes after the close to append today's bar, so a build
+// running at 4:30 PM ET may still see yesterday as the latest bar and
+// silently produce a snapshot whose values match yesterday's.
+const NY_DATE_FMT_BAR = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+export function lastBarNyDate(series: YahooSeries): string | null {
+  const last = series.bars[series.bars.length - 1];
+  if (!last) return null;
+  return NY_DATE_FMT_BAR.format(new Date(last.timestamp * 1000));
+}
+
 export function volumes(series: YahooSeries): number[] {
   return series.bars
     .map((b) => b.volume)

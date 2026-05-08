@@ -1,6 +1,6 @@
 import "server-only";
 
-import { closes, fetchYahooBatch } from "@/lib/data/yahoo";
+import { closes, fetchYahooBatch, lastBarNyDate } from "@/lib/data/yahoo";
 import { fetchCoreCrypto, classifyCryptoRegime } from "@/lib/data/coingecko";
 import {
   ema,
@@ -64,10 +64,7 @@ function vixFlag(level: number | null): string | null {
   return null;
 }
 
-export interface RegimeBuildResult
-  extends Omit<RegimeSnapshot, "id" | "created_at"> {
-  // alias for typing convenience
-}
+export type RegimeBuildResult = Omit<RegimeSnapshot, "id" | "created_at">;
 
 // en-CA locale formats as YYYY-MM-DD; using America/New_York keeps the
 // snapshot_date aligned with the US trading session even when the server
@@ -118,6 +115,39 @@ export async function buildRegimeSnapshot(
     const entry = yahooData[symbol];
     if (!entry || "error" in entry) return [];
     return closes(entry);
+  }
+
+  // Stale-bar guard for EOD snapshots. Yahoo's chart endpoint can take
+  // 30-60 min after the close to append today's bar — if we run too
+  // early, every sector ETF series ends on yesterday's close and the
+  // computed rs5d / rs30d come out bit-identical to yesterday's snapshot.
+  // We only enforce this on a US weekday EOD; weekends and holidays
+  // legitimately have no fresh bar.
+  if (snapshotType === "eod") {
+    const todayNyDow = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      weekday: "short",
+    }).format(today);
+    const isWeekday =
+      todayNyDow !== "Sat" && todayNyDow !== "Sun";
+    if (isWeekday) {
+      const checked: Array<{ symbol: string; barDate: string | null }> = [];
+      for (const symbol of [BENCHMARK_SYMBOL, ...sectorSymbols]) {
+        const entry = yahooData[symbol];
+        if (!entry || "error" in entry) continue;
+        checked.push({ symbol, barDate: lastBarNyDate(entry) });
+      }
+      const stale = checked.filter((c) => c.barDate !== dateStr);
+      if (stale.length > 0) {
+        const detail = stale
+          .slice(0, 5)
+          .map((c) => `${c.symbol}=${c.barDate ?? "no-bars"}`)
+          .join(", ");
+        throw new Error(
+          `Yahoo data not yet posted for ${dateStr} — last bars are stale (${detail}). Retry after ~5pm ET.`,
+        );
+      }
+    }
   }
 
   const spxCashCloses = safeCloses(MACRO_SYMBOLS.spx);

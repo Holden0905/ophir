@@ -7,19 +7,19 @@
     },
     {
       "path": "/api/cron/regime?type=eod",
-      "schedule": "30 21 * * 1-5"
-    },
-    {
-      "path": "/api/cron/refresh-stocks",
-      "schedule": "45 21 * * 1-5"
-    },
-    {
-      "path": "/api/cron/signals",
       "schedule": "0 22 * * 1-5"
     },
     {
+      "path": "/api/cron/refresh-stocks",
+      "schedule": "15 22 * * 1-5"
+    },
+    {
+      "path": "/api/cron/signals",
+      "schedule": "30 22 * * 1-5"
+    },
+    {
       "path": "/api/cron/discovery",
-      "schedule": "10 22 * * 1-5"
+      "schedule": "45 22 * * 1-5"
     }
   ]
 }
