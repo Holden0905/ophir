@@ -61,6 +61,30 @@ export function SettingsClient({
         Settings
       </h1>
 
+      {/* Promoted to the top of the stack so the link is the first thing
+          on the Settings screen — particularly important on mobile, which
+          has no nav-bar entry point for /about. */}
+      <Link
+        href="/about"
+        className="card flex min-h-[64px] items-center justify-between gap-3 p-5 transition-colors hover:border-[var(--accent-amber-dim)] hover:bg-[var(--bg-elevated)] active:bg-[var(--bg-elevated)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-amber-dim)]"
+      >
+        <div className="min-w-0">
+          <div className="font-ui text-xs uppercase tracking-[0.3em] text-[var(--accent-amber)]">
+            About Ophir
+          </div>
+          <p className="mt-1 font-ui text-sm text-[var(--text-secondary)]">
+            The trading framework, signal logic, and what every Matrix
+            column means.
+          </p>
+        </div>
+        <span
+          aria-hidden
+          className="shrink-0 font-data text-2xl leading-none text-[var(--text-muted)]"
+        >
+          →
+        </span>
+      </Link>
+
       <div className="card p-5">
         <div className="font-ui text-xs uppercase tracking-[0.3em] text-[var(--text-muted)]">
           Account
@@ -97,24 +121,6 @@ export function SettingsClient({
       </div>
 
       <HealthPanel />
-
-      <Link
-        href="/about"
-        className="card flex items-center justify-between p-5 transition-colors hover:border-[var(--accent-amber-dim)]"
-      >
-        <div>
-          <div className="font-ui text-xs uppercase tracking-[0.3em] text-[var(--text-muted)]">
-            About Ophir
-          </div>
-          <p className="mt-1 font-ui text-sm text-[var(--text-secondary)]">
-            The trading framework, signal logic, and what every Matrix
-            column means.
-          </p>
-        </div>
-        <span aria-hidden className="font-data text-xl text-[var(--text-muted)]">
-          →
-        </span>
-      </Link>
 
       <div className="card p-5">
         <div className="flex items-center justify-between">
