@@ -6,7 +6,7 @@ import { CryptoBarometer } from "@/components/regime/CryptoBarometer";
 import { SectorRotation } from "@/components/regime/SectorRotation";
 import { relativeTime } from "@/lib/format";
 import { isUsEquityMarketOpen } from "@/lib/marketHours";
-import { MACRO_SYMBOLS, SECTOR_ETFS } from "@/lib/data/symbols";
+import { BENCHMARK_SYMBOL, MACRO_SYMBOLS, SECTOR_ETFS } from "@/lib/data/symbols";
 import type { RegimeSnapshot, SectorSnapshot } from "@/lib/supabase/types";
 
 const POLL_MS = 60_000;
@@ -59,14 +59,16 @@ export function DashboardLive({
     [snapshot?.snapshot_type],
   );
 
-  // Stock symbols: macro trio (or futures equivalents) + 11 sector ETFs.
-  // Comma-separated key keeps the effect dependency stable across renders.
+  // Stock symbols: macro trio (or futures equivalents) + SPY benchmark
+  // (used as the 1D rs baseline) + 11 sector ETFs. Comma-separated key
+  // keeps the effect dependency stable across renders.
   const stockTickerKey = useMemo(
     () =>
       [
         macroSyms.spx,
         macroSyms.ndx,
         macroSyms.vix,
+        BENCHMARK_SYMBOL,
         ...SECTOR_ETFS.map((s) => s.symbol),
       ].join(","),
     [macroSyms],
@@ -205,6 +207,11 @@ export function DashboardLive({
       <SectorRotation
         sectors={displaySectors}
         asOf={snapshot?.created_at ?? null}
+        spyChangePct={
+          stockQuotes[BENCHMARK_SYMBOL]?.change_pct ??
+          snapshot?.spx_change_pct ??
+          null
+        }
       />
     </div>
   );

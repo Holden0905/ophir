@@ -2,7 +2,31 @@
 
 import { useState } from "react";
 import { fmtPct, pctClass, relativeTime } from "@/lib/format";
+import { isUsEquityMarketOpen } from "@/lib/marketHours";
 import type { SectorSnapshot } from "@/lib/supabase/types";
+
+type View = "1d" | "5d" | "30d";
+
+// 1D is the most useful read while the session is live or just-closed —
+// it answers "what rotated today." Outside that window the 1D number
+// hasn't moved (everyone's stuck on yesterday's close), so we default
+// to the 5D trend instead.
+function defaultViewForNow(now: Date = new Date()): View {
+  if (isUsEquityMarketOpen(now)) return "1d";
+  // Post-close window in NY: between 16:00 and 20:00 ET on a weekday.
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const isWeekday = weekday !== "Sat" && weekday !== "Sun";
+  if (isWeekday && hour >= 16 && hour < 20) return "1d";
+  return "5d";
+}
 
 // Display-only short names so every row fits on one line. The full names
 // are still stored in the snapshot and used by the AI prompt.
@@ -15,6 +39,7 @@ const SECTOR_SHORT_NAMES: Record<string, string> = {
 export function SectorRotation({
   sectors,
   asOf,
+  spyChangePct,
 }: {
   sectors: SectorSnapshot[];
   // ISO timestamp of the snapshot whose rs5d/rs30d values these are. The
@@ -22,8 +47,13 @@ export function SectorRotation({
   // today's close or from an earlier session — separate from the
   // intraday "Live · Xs ago" stamp at the page level.
   asOf?: string | null;
+  // Today's % change for SPY. Used as the 1D rs baseline:
+  //   rs1d(sector) = sector.changePct - spyChangePct
+  // Live during market hours, falls back to the snapshot's spx_change_pct
+  // (SPX cash index pct change ≈ SPY pct change to within rounding).
+  spyChangePct?: number | null;
 }) {
-  const [view, setView] = useState<"5d" | "30d">("5d");
+  const [view, setView] = useState<View>(() => defaultViewForNow());
 
   if (!sectors || sectors.length === 0) {
     return (
@@ -38,20 +68,28 @@ export function SectorRotation({
     );
   }
 
-  const ranked = [...sectors].sort((a, b) => {
-    const av = view === "5d" ? a.rs5d : a.rs30d;
-    const bv = view === "5d" ? b.rs5d : b.rs30d;
-    return (bv ?? 0) - (av ?? 0);
-  });
+  // 1D rs is computed live from the (possibly polled) sector.changePct
+  // and the SPY benchmark. If either is missing the row gets null and
+  // sorts to the bottom.
+  const rs1d = (s: SectorSnapshot): number | null =>
+    s.changePct === null || spyChangePct === null || spyChangePct === undefined
+      ? null
+      : s.changePct - spyChangePct;
+
+  const valueFor = (s: SectorSnapshot): number | null =>
+    view === "1d" ? rs1d(s) : view === "5d" ? s.rs5d : s.rs30d;
+
+  const ranked = [...sectors].sort(
+    (a, b) => (valueFor(b) ?? 0) - (valueFor(a) ?? 0),
+  );
 
   const maxAbs = Math.max(
-    ...ranked.map((s) =>
-      Math.abs(view === "5d" ? (s.rs5d ?? 0) : (s.rs30d ?? 0)),
-    ),
+    ...ranked.map((s) => Math.abs(valueFor(s) ?? 0)),
     0.01,
   );
 
-  // Divergence: top of 5d vs bottom of 30d (or vice-versa)
+  // Divergence highlight: shown only on the 5D / 30D trend views — top
+  // of 5d vs top of 30d. Doesn't apply to the 1D intraday read.
   const sorted5 = [...sectors].sort(
     (a, b) => (b.rs5d ?? 0) - (a.rs5d ?? 0),
   );
@@ -60,7 +98,8 @@ export function SectorRotation({
   );
   const top5 = new Set(sorted5.slice(0, 3).map((s) => s.symbol));
   const top30 = new Set(sorted30.slice(0, 3).map((s) => s.symbol));
-  const divergent = [...top5].filter((s) => !top30.has(s));
+  const divergent =
+    view === "1d" ? [] : [...top5].filter((s) => !top30.has(s));
 
   return (
     <div className="card p-5">
@@ -79,7 +118,7 @@ export function SectorRotation({
           )}
         </div>
         <div className="flex gap-1 rounded bg-[var(--bg-elevated)] p-0.5 text-xs font-ui">
-          {(["5d", "30d"] as const).map((v) => (
+          {(["1d", "5d", "30d"] as const).map((v) => (
             <button
               key={v}
               type="button"
@@ -98,7 +137,7 @@ export function SectorRotation({
 
       <div className="mt-4 space-y-1.5">
         {ranked.map((s) => {
-          const v = view === "5d" ? s.rs5d : s.rs30d;
+          const v = valueFor(s);
           const width = ((v ?? 0) / maxAbs) * 50;
           const positive = (v ?? 0) >= 0;
           const isDivergent = divergent.includes(s.symbol);
