@@ -2,6 +2,8 @@ import "server-only";
 
 import type Anthropic from "@anthropic-ai/sdk";
 import { anthropic, CLAUDE_MODEL } from "@/lib/ai/anthropic";
+import { CONVICTION_LABEL, SETUP_FULL } from "@/lib/signals/labels";
+import type { WatchlistSignalReport } from "@/lib/signals/queries";
 import type {
   RegimeClassification,
   SectorSnapshot,
@@ -10,7 +12,7 @@ import type {
 
 const SYSTEM = `You are Ophir, a personal market intelligence system for a sophisticated swing trader. Your voice is that of a senior analyst writing a concise intelligence brief — authoritative, specific, no fluff. Use the Feroldi/Stoffel business lifecycle framework and Brian Shannon's EMA methodology as context. Reference specific numbers. Never use generic phrases like "markets showed mixed signals." Say what actually happened and what it means.
 
-Write in 2-3 tight paragraphs. Editorial prose. No bullet points in the narrative. Return JSON only — no preamble, no markdown fences.`;
+Structure: 2-3 tight regime paragraphs first. Then, when WATCHLIST SIGNALS are provided, a final paragraph beginning "On your watchlist," that names specific tickers — what triggered (with setup type and conviction grades), what's still qualifying and for how long, what just fell out, and what's in cooldown. Stay in the same FT editorial voice — flowing prose, not bullets. If everything is quiet, say so plainly. Return JSON only — no preamble, no markdown fences.`;
 
 export interface RegimeInput {
   snapshot_type: SnapshotType;
@@ -24,6 +26,10 @@ export interface RegimeInput {
   eth: { price: number | null; change24h: number | null };
   sol: { price: number | null; change24h: number | null };
   sectors: SectorSnapshot[];
+  // When provided, the brief gets a closing watchlist paragraph that
+  // names specific tickers. Optional so manual / older calls still work
+  // without it (the brief just omits the watchlist section).
+  watchlist?: WatchlistSignalReport | null;
 }
 
 export interface RegimeOutput {
@@ -34,6 +40,55 @@ export interface RegimeOutput {
 function fmt(n: number | null | undefined, d = 2): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return "n/a";
   return n.toFixed(d);
+}
+
+function watchlistBlock(w: WatchlistSignalReport | null | undefined): string {
+  if (!w || w.total_watchlist === 0) return "";
+  const lines: string[] = [];
+  lines.push("");
+  lines.push(`WATCHLIST SIGNALS (${w.total_watchlist} names):`);
+
+  if (w.triggered_today.length === 0) {
+    lines.push("- Triggered today: none");
+  } else {
+    for (const t of w.triggered_today) {
+      const conv = t.conviction.length
+        ? t.conviction.map((c) => CONVICTION_LABEL[c]).join(", ")
+        : "no extra conviction";
+      lines.push(
+        `- Triggered today: ${t.ticker} — ${SETUP_FULL[t.setup]} (${conv})`,
+      );
+    }
+  }
+
+  if (w.qualifying.length === 0) {
+    lines.push("- Currently qualifying: none");
+  } else {
+    for (const q of w.qualifying) {
+      lines.push(
+        `- Currently qualifying: ${q.ticker} — ${SETUP_FULL[q.setup]}, day ${q.consecutive_days} of the run`,
+      );
+    }
+  }
+
+  if (w.fell_out_today.length > 0) {
+    for (const f of w.fell_out_today) {
+      lines.push(
+        `- Fell out today: ${f.ticker} — ${SETUP_FULL[f.setup]} (had been qualifying ${f.days_qualified} day${f.days_qualified === 1 ? "" : "s"})`,
+      );
+    }
+  }
+
+  if (w.in_cooldown.length > 0) {
+    for (const c of w.in_cooldown) {
+      lines.push(
+        `- In cooldown: ${c.ticker} — ${SETUP_FULL[c.setup]}, ${c.days_remaining} day${c.days_remaining === 1 ? "" : "s"} remaining`,
+      );
+    }
+  }
+
+  lines.push(`- Quiet: ${w.quiet_count} of ${w.total_watchlist} names with no setup activity`);
+  return lines.join("\n");
 }
 
 function buildUserPrompt(input: RegimeInput): string {
@@ -65,7 +120,7 @@ CRYPTO:
 - SOL: $${fmt(input.sol.price, 2)} (${fmt(input.sol.change24h)}% 24h)
 
 SECTOR ROTATION (5-day RS vs SPY):
-${sectorLines}
+${sectorLines}${watchlistBlock(input.watchlist)}
 
 Classify the regime as one of: risk_on, risk_off, transitional, choppy.
 Return JSON: { "classification": "...", "narrative": "..." }`;

@@ -13,6 +13,7 @@ import {
   SECTOR_ETFS,
 } from "@/lib/data/symbols";
 import { generateRegimeBrief } from "@/lib/ai/regime";
+import { fetchWatchlistSignalReport } from "@/lib/signals/queries";
 import type {
   RegimeSnapshot,
   SectorSnapshot,
@@ -175,6 +176,20 @@ export async function buildRegimeSnapshot(
     };
   });
 
+  // Watchlist signal report is best-effort — if the signals table is
+  // empty (e.g. before the engine has ever run on this watchlist) we
+  // still want a regime brief, just without the closing watchlist
+  // paragraph. Premarket runs ~13:00 UTC against the prior session's
+  // signals; EOD runs after the 22:15 signals cron so today's are in.
+  let watchlist = null;
+  try {
+    watchlist = await fetchWatchlistSignalReport(dateStr);
+  } catch (e) {
+    console.warn(
+      `[regime/build] watchlist fetch failed: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
   const aiInput = {
     snapshot_type: snapshotType,
     date: dateStr,
@@ -187,6 +202,7 @@ export async function buildRegimeSnapshot(
     eth: { price: crypto.eth.price, change24h: crypto.eth.change24h },
     sol: { price: crypto.sol.price, change24h: crypto.sol.change24h },
     sectors,
+    watchlist,
   };
 
   const ai = await generateRegimeBrief(aiInput);

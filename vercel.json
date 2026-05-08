@@ -6,15 +6,15 @@
       "schedule": "0 13 * * 1-5"
     },
     {
-      "path": "/api/cron/regime?type=eod",
+      "path": "/api/cron/refresh-stocks",
       "schedule": "0 22 * * 1-5"
     },
     {
-      "path": "/api/cron/refresh-stocks",
+      "path": "/api/cron/signals",
       "schedule": "15 22 * * 1-5"
     },
     {
-      "path": "/api/cron/signals",
+      "path": "/api/cron/regime?type=eod",
       "schedule": "30 22 * * 1-5"
     },
     {
