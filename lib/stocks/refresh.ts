@@ -23,19 +23,18 @@ function safeNumber(n: number | null | undefined): number | null {
   return n;
 }
 
-export async function refreshTechnicals(
+// Yahoo-only technicals — pure compute, no DB write. Used by the
+// preview path on the matrix detail page when a ticker isn't in the
+// user's stocks table (typically a Discovery click on a new name).
+export async function computeTechnicalsFromYahoo(
   ticker: string,
 ): Promise<Partial<StockTechnicals>> {
-  console.log(`[refreshTechnicals] ${ticker} → fetching Yahoo series`);
   const series = await fetchYahooSeries(ticker, {
     range: "1y",
     interval: "1d",
   });
   const c = closes(series);
   const v = volumes(series);
-  console.log(
-    `[refreshTechnicals] ${ticker} → got ${c.length} closes, ${v.length} volumes (last close ${c.at(-1) ?? "none"})`,
-  );
   if (c.length < 2) {
     throw new Error(`Yahoo series for ${ticker} has fewer than 2 closes`);
   }
@@ -54,7 +53,7 @@ export async function refreshTechnicals(
   );
   const avgVol20 = avg(v.slice(-20));
 
-  const tech: Partial<StockTechnicals> = {
+  return {
     ticker,
     current_price: safeNumber(last),
     price_change_pct: safeNumber(pctChange(prev, last)),
@@ -73,6 +72,13 @@ export async function refreshTechnicals(
     pct_from_52_high: high52 ? safeNumber(pctChange(high52, last)) : null,
     last_fetched_at: new Date().toISOString(),
   };
+}
+
+export async function refreshTechnicals(
+  ticker: string,
+): Promise<Partial<StockTechnicals>> {
+  console.log(`[refreshTechnicals] ${ticker} → fetching Yahoo series`);
+  const tech = await computeTechnicalsFromYahoo(ticker);
 
   const svc = createServiceClient();
   const { error } = await svc

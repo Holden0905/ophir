@@ -184,6 +184,11 @@ export function DiscoveryClient({
 }
 
 function ScanResults({ scan }: { scan: DiscoveryScan }) {
+  // Encode the ordered ticker list once so each row can build its detail
+  // link with `from=discovery&list=...&i=N`. The detail page uses this
+  // to render prev/next arrows and a "Back to Discovery" link.
+  const tickers = scan.results.map((r) => r.ticker);
+  const listParam = encodeURIComponent(tickers.join(","));
   return (
     <div className="space-y-4">
       <div className="card p-6">
@@ -221,14 +226,14 @@ function ScanResults({ scan }: { scan: DiscoveryScan }) {
               </tr>
             </thead>
             <tbody>
-              {scan.results.map((r) => (
+              {scan.results.map((r, idx) => (
                 <tr
                   key={r.ticker}
                   className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-elevated)]"
                 >
                   <td className="px-3 py-2 font-data font-medium text-[var(--text-primary)]">
                     <Link
-                      href={`/matrix/${r.ticker}`}
+                      href={`/matrix/${r.ticker}?from=discovery&list=${listParam}&i=${idx}`}
                       className="hover:text-[var(--accent-amber)]"
                     >
                       {r.ticker}
