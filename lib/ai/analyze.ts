@@ -119,6 +119,71 @@ export interface AnalyzeOutput {
   narrative: string;
 }
 
+// Extract the narrative from whatever Claude returned. Cascade:
+//   1. Strip markdown fences anywhere in the string.
+//   2. JSON.parse the whole thing and read .narrative.
+//   3. JSON.parse the first { ... last } slice and read .narrative.
+//   4. Regex-extract "narrative": "..." (recovers from unescaped control
+//      chars inside the string that break JSON.parse).
+//   5. Last resort: the cleaned text itself, on the assumption Claude
+//      ignored the JSON instruction and just wrote prose.
+// We never surface a raw parse error to the user. If everything failed
+// and there's literally no text, we return a single sentence explaining
+// the analysis was unavailable so the panel still renders cleanly.
+export function extractNarrative(rawText: string): string {
+  const stripped = rawText
+    .replace(/```(?:json|JSON)?\s*/g, "")
+    .replace(/```/g, "")
+    .trim();
+
+  try {
+    const obj = JSON.parse(stripped) as { narrative?: unknown };
+    if (typeof obj?.narrative === "string" && obj.narrative.trim()) {
+      return obj.narrative.trim();
+    }
+  } catch {
+    /* fall through */
+  }
+
+  const firstBrace = stripped.indexOf("{");
+  const lastBrace = stripped.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const slice = stripped.slice(firstBrace, lastBrace + 1);
+    try {
+      const obj = JSON.parse(slice) as { narrative?: unknown };
+      if (typeof obj?.narrative === "string" && obj.narrative.trim()) {
+        return obj.narrative.trim();
+      }
+    } catch {
+      /* fall through */
+    }
+    // Last-ditch: pull the value of "narrative" via regex. Handles the
+    // case where Claude embeds raw newlines or other control characters
+    // inside the string, breaking JSON.parse but leaving the content
+    // readable. [^"\\] also matches newlines, so multi-line bodies are
+    // captured fine when the closing quote is present.
+    const m = slice.match(/"narrative"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (m && m[1]) {
+      const unescaped = m[1]
+        .replace(/\\n/g, "\n")
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, "\\");
+      if (unescaped.trim()) return unescaped.trim();
+    }
+  }
+
+  // Claude ignored the JSON instruction — treat the stripped body as
+  // the narrative directly. Strip any leftover JSON-skeleton noise at
+  // the edges so the prose reads cleanly.
+  const fallback = stripped
+    .replace(/^\s*\{?\s*"?narrative"?\s*"?\s*:\s*"?/i, "")
+    .replace(/"?\s*\}?\s*$/i, "")
+    .trim();
+  if (fallback.length > 0) return fallback;
+
+  return "Analysis unavailable — the model returned an empty response. Try Refresh.";
+}
+
 export async function generateTradeAnalysis(
   input: AnalysisInput,
 ): Promise<AnalyzeOutput> {
@@ -136,22 +201,5 @@ export async function generateTradeAnalysis(
     .map((c) => c.text)
     .join("");
 
-  const cleaned = text
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/```\s*$/i, "")
-    .trim();
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch {
-    throw new Error(
-      `Claude returned non-JSON analyze response: ${text.slice(0, 200)}`,
-    );
-  }
-  const obj = parsed as { narrative?: string };
-  if (!obj.narrative) {
-    throw new Error(`Invalid analyze response shape: ${cleaned.slice(0, 200)}`);
-  }
-  return { narrative: obj.narrative };
+  return { narrative: extractNarrative(text) };
 }
