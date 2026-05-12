@@ -18,6 +18,7 @@ import { StockNotes } from "./StockNotes";
 import { PositionToggle } from "./PositionToggle";
 import { StockDetailNav } from "./StockDetailNav";
 import { AddToMatrixCta } from "./AddToMatrixCta";
+import { AnalyzeTradePanel } from "@/components/analyze/AnalyzeTradePanel";
 import type {
   Stock,
   StockFundamentals,
@@ -167,6 +168,7 @@ export default async function StockDetailPage({
         <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-6">
             <TradingViewChart ticker={ticker} />
+            <AnalyzeTradePanel ticker={ticker} />
             <FundamentalsCard fundamentals={fundamentals} />
           </div>
           <div className="space-y-6">
@@ -238,6 +240,8 @@ export default async function StockDetailPage({
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <TradingViewChart ticker={stock.ticker} />
+
+          <AnalyzeTradePanel ticker={stock.ticker} />
 
           <FundamentalsCard fundamentals={fundamentals} />
         </div>

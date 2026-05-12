@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { fmtPct, fmtPrice } from "@/lib/format";
+import { AnalyzeTradePanel } from "@/components/analyze/AnalyzeTradePanel";
 import { ConvictionPills } from "@/components/signals/ConvictionPills";
 import { SignalBadge } from "@/components/signals/SignalBadge";
 import { SignalChartPanel } from "@/components/signals/SignalChartPanel";
@@ -256,6 +257,8 @@ export function SignalSidePanel({
 
         <div className="space-y-5 p-5">
           <SignalChartPanel ticker={stock.ticker} triggerDate={triggerDate} />
+
+          <AnalyzeTradePanel ticker={stock.ticker} />
 
           <div className="grid gap-5 lg:grid-cols-2">
             <div className="card p-5">
