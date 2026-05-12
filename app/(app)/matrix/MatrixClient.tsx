@@ -230,9 +230,14 @@ export function MatrixClient({ initialRows }: { initialRows: MatrixRow[] }) {
             type="button"
             onClick={refreshAll}
             disabled={refreshing || rows.length === 0}
-            className={`inline-flex items-center gap-1.5 rounded border border-[var(--border)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-[var(--text-secondary)] hover:text-[var(--accent-amber)] disabled:opacity-50 ${refreshing ? "pulse-amber" : ""}`}
+            aria-busy={refreshing || undefined}
+            className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 font-ui text-xs uppercase tracking-wider transition-colors active:scale-[0.98] ${
+              refreshing
+                ? "border border-[var(--accent-amber-dim)] bg-[var(--accent-amber)] text-black shadow-[0_0_0_1px_var(--accent-amber-dim)] cursor-progress"
+                : "border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--accent-amber)] disabled:opacity-50"
+            }`}
           >
-            {refreshing && <Spinner size={12} />}
+            {refreshing && <Spinner size={12} className="text-black" />}
             {refreshing ? "Refreshing…" : "Refresh data"}
           </button>
           <button

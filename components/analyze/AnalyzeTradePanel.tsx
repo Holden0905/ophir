@@ -111,28 +111,57 @@ export function AnalyzeTradePanel({ ticker }: { ticker: string }) {
   }
 
   // Empty / first-render state — show the trigger button. Loading sits on
-  // the same button so the user's eye stays in one place.
+  // the same button so the user's eye stays in one place. When pending,
+  // the whole card lifts into an amber-tinted state so it reads as
+  // actively working, not greyed-out.
   if (!analysis) {
     return (
-      <div className="card p-6">
+      <div
+        className="card p-6 transition-colors"
+        style={
+          pending
+            ? {
+                borderColor: "var(--accent-amber-dim)",
+                background:
+                  "color-mix(in oklab, var(--bg-card) 92%, var(--accent-amber))",
+              }
+            : undefined
+        }
+      >
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="font-ui text-[10px] uppercase tracking-[0.3em] text-[var(--accent-amber)]">
               Analyze trade
             </div>
-            <p className="mt-1 font-ui text-sm text-[var(--text-secondary)]">
-              Reads {ticker} through the framework — setup conditions, volume,
-              regime context. Doesn&apos;t recommend, just shows what&apos;s there.
-            </p>
+            {pending ? (
+              <p className="mt-1 inline-flex items-center gap-2 font-ui text-sm font-medium text-[var(--accent-amber)]">
+                <Spinner
+                  size={14}
+                  className="text-[var(--accent-amber)]"
+                />
+                Reading the tape…
+              </p>
+            ) : (
+              <p className="mt-1 font-ui text-sm text-[var(--text-secondary)]">
+                Reads {ticker} through the framework — setup conditions,
+                volume, regime context. Doesn&apos;t recommend, just shows
+                what&apos;s there.
+              </p>
+            )}
           </div>
           <button
             type="button"
             onClick={run}
             disabled={pending}
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-2 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50 ${pending ? "pulse-amber" : ""}`}
+            aria-busy={pending || undefined}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-2 font-ui text-xs uppercase tracking-wider text-black transition-shadow hover:opacity-90 active:scale-[0.98] active:shadow-[0_0_0_2px_var(--accent-amber-dim)] ${
+              pending
+                ? "shadow-[0_0_0_2px_var(--accent-amber-dim)] cursor-progress"
+                : "disabled:opacity-50"
+            }`}
           >
-            {pending && <Spinner size={12} />}
-            {pending ? "Reading the tape…" : "Analyze"}
+            {pending && <Spinner size={12} className="text-black" />}
+            {pending ? "Working…" : "Analyze"}
           </button>
         </div>
         {error && (
@@ -160,9 +189,16 @@ export function AnalyzeTradePanel({ ticker }: { ticker: string }) {
             type="button"
             onClick={refresh}
             disabled={pending}
-            className="inline-flex items-center gap-1 rounded px-1 text-[var(--text-secondary)] hover:text-[var(--accent-amber)] disabled:opacity-50"
+            aria-busy={pending || undefined}
+            className={`inline-flex items-center gap-1 rounded px-1 hover:text-[var(--accent-amber)] ${
+              pending
+                ? "text-[var(--accent-amber)] cursor-progress"
+                : "text-[var(--text-secondary)]"
+            }`}
           >
-            {pending && <Spinner size={10} />}
+            {pending && (
+              <Spinner size={10} className="text-[var(--accent-amber)]" />
+            )}
             {pending ? "refreshing…" : "refresh"}
           </button>
         </div>

@@ -23,9 +23,14 @@ export function AddToMatrixCta({ ticker }: { ticker: string }) {
       type="button"
       onClick={add}
       disabled={pending}
-      className={`inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50 ${pending ? "pulse-amber" : ""}`}
+      aria-busy={pending || undefined}
+      className={`inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black transition-shadow hover:opacity-90 active:scale-[0.98] ${
+        pending
+          ? "shadow-[0_0_0_2px_var(--accent-amber-dim)] cursor-progress"
+          : "disabled:opacity-50"
+      }`}
     >
-      {pending && <Spinner size={11} />}
+      {pending && <Spinner size={11} className="text-black" />}
       {pending ? "Adding…" : "+ Add to matrix"}
     </button>
   );

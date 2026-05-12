@@ -112,9 +112,14 @@ export function SettingsClient({
           <button
             type="submit"
             disabled={savingName}
-            className="inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50"
+            aria-busy={savingName || undefined}
+            className={`inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black transition-shadow hover:opacity-90 active:scale-[0.98] ${
+              savingName
+                ? "shadow-[0_0_0_2px_var(--accent-amber-dim)] cursor-progress"
+                : "disabled:opacity-50"
+            }`}
           >
-            {savingName && <Spinner size={11} />}
+            {savingName && <Spinner size={11} className="text-black" />}
             {savingName ? "Saving…" : "Save"}
           </button>
         </form>
@@ -136,9 +141,14 @@ export function SettingsClient({
             type="button"
             onClick={newInvite}
             disabled={savingInvite}
-            className="inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50"
+            aria-busy={savingInvite || undefined}
+            className={`inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black transition-shadow hover:opacity-90 active:scale-[0.98] ${
+              savingInvite
+                ? "shadow-[0_0_0_2px_var(--accent-amber-dim)] cursor-progress"
+                : "disabled:opacity-50"
+            }`}
           >
-            {savingInvite && <Spinner size={11} />}
+            {savingInvite && <Spinner size={11} className="text-black" />}
             {savingInvite ? "Generating…" : "Generate"}
           </button>
         </div>

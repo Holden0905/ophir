@@ -105,9 +105,14 @@ export function DiscoveryClient({
             type="button"
             onClick={runScan}
             disabled={pending}
-            className={`inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black hover:opacity-90 disabled:opacity-50 ${pending ? "pulse-amber" : ""}`}
+            aria-busy={pending || undefined}
+            className={`inline-flex items-center gap-1.5 rounded bg-[var(--accent-amber)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-black transition-shadow hover:opacity-90 active:scale-[0.98] ${
+              pending
+                ? "shadow-[0_0_0_2px_var(--accent-amber-dim)] cursor-progress"
+                : "disabled:opacity-50"
+            }`}
           >
-            {pending && <Spinner size={12} />}
+            {pending && <Spinner size={12} className="text-black" />}
             {pending ? "Scanning the universe…" : "Run scan"}
           </button>
         </div>
@@ -295,13 +300,16 @@ function AddToMatrixButton({ ticker }: { ticker: string }) {
       type="button"
       disabled={pending || done}
       onClick={add}
-      className={`inline-flex items-center gap-1 rounded border border-[var(--border)] px-2 py-1 font-ui text-[10px] uppercase tracking-wider transition-colors ${
-        done
-          ? "border-[var(--accent-amber-dim)] text-[var(--accent-amber)]"
-          : "text-[var(--text-secondary)] hover:text-[var(--accent-amber)]"
+      aria-busy={pending || undefined}
+      className={`inline-flex items-center gap-1 rounded border px-2 py-1 font-ui text-[10px] uppercase tracking-wider transition-colors ${
+        pending
+          ? "border-[var(--accent-amber-dim)] bg-[var(--accent-amber)] text-black cursor-progress"
+          : done
+            ? "border-[var(--accent-amber-dim)] text-[var(--accent-amber)]"
+            : "border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--accent-amber)]"
       }`}
     >
-      {pending && <Spinner size={10} />}
+      {pending && <Spinner size={10} className="text-black" />}
       {done ? "added" : pending ? "Adding…" : "+ matrix"}
     </button>
   );

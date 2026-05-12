@@ -75,9 +75,16 @@ export function PositionToggle({ stock }: { stock: Stock }) {
         type="button"
         onClick={archive}
         disabled={pending}
-        className="inline-flex items-center gap-1.5 rounded border border-[var(--border)] px-3 py-1.5 font-ui text-xs uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--accent-red)] disabled:opacity-60"
+        aria-busy={pendingAction === "archive" || undefined}
+        className={`inline-flex items-center gap-1.5 rounded border px-3 py-1.5 font-ui text-xs uppercase tracking-wider transition-colors active:scale-[0.98] ${
+          pendingAction === "archive"
+            ? "border-[var(--accent-red)] bg-[var(--accent-red)]/15 text-[var(--accent-red)] cursor-progress"
+            : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent-red)] disabled:opacity-60"
+        }`}
       >
-        {pendingAction === "archive" && <Spinner size={11} />}
+        {pendingAction === "archive" && (
+          <Spinner size={11} className="text-[var(--accent-red)]" />
+        )}
         {pendingAction === "archive" ? "Removing…" : "Remove"}
       </button>
     </div>

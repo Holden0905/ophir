@@ -104,9 +104,14 @@ export function AddStockModal({
           <button
             type="submit"
             disabled={pending}
-            className={`inline-flex w-full items-center justify-center gap-2 rounded bg-[var(--accent-amber)] px-3 py-2 font-ui text-sm font-medium text-black hover:opacity-90 disabled:opacity-50 ${pending ? "pulse-amber" : ""}`}
+            aria-busy={pending || undefined}
+            className={`inline-flex w-full items-center justify-center gap-2 rounded bg-[var(--accent-amber)] px-3 py-2 font-ui text-sm font-medium text-black transition-shadow hover:opacity-90 active:scale-[0.98] ${
+              pending
+                ? "shadow-[0_0_0_2px_var(--accent-amber-dim)] cursor-progress"
+                : "disabled:opacity-50"
+            }`}
           >
-            {pending && <Spinner size={14} />}
+            {pending && <Spinner size={14} className="text-black" />}
             {pending ? "Adding…" : "Add to matrix"}
           </button>
         </form>

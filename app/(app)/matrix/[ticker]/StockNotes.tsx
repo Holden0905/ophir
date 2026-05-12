@@ -28,7 +28,14 @@ export function StockNotes({
         <div className="font-ui text-xs uppercase tracking-[0.3em] text-[var(--text-muted)]">
           Notes
         </div>
-        <span className="font-ui text-[10px] text-[var(--text-muted)]">
+        <span
+          className={`font-ui text-[10px] ${
+            pending
+              ? "text-[var(--accent-amber)]"
+              : "text-[var(--text-muted)]"
+          }`}
+          aria-live="polite"
+        >
           {pending
             ? "saving…"
             : savedAt
