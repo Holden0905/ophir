@@ -1,4 +1,5 @@
 import { relativeTime } from "@/lib/format";
+import { NarrativeBody } from "@/components/shared/NarrativeBody";
 
 export function RegimeNarrative({
   narrative,
@@ -19,8 +20,6 @@ export function RegimeNarrative({
     );
   }
 
-  const paras = narrative.split(/\n\n+/).filter(Boolean);
-
   return (
     <div className="card p-6">
       <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
@@ -32,9 +31,7 @@ export function RegimeNarrative({
         </div>
       </div>
       <div className="prose-editorial mt-4">
-        {paras.map((para, i) => (
-          <p key={i}>{para}</p>
-        ))}
+        <NarrativeBody narrative={narrative} />
       </div>
     </div>
   );

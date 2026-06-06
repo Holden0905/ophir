@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/shared/Spinner";
+import { NarrativeBody } from "@/components/shared/NarrativeBody";
 import { fmtPct, fmtPrice, pctClass, relativeTime } from "@/lib/format";
 import type { DiscoveryScan, ScanMode } from "@/lib/supabase/types";
 import { addStockByTicker } from "../matrix/actions";
@@ -208,9 +209,7 @@ function ScanResults({ scan }: { scan: DiscoveryScan }) {
           </span>
         </div>
         <div className="prose-editorial mt-4">
-          {(scan.narrative ?? "").split(/\n\n+/).map((para, i) => (
-            <p key={i}>{para}</p>
-          ))}
+          <NarrativeBody narrative={scan.narrative ?? ""} />
         </div>
       </div>
 

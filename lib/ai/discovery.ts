@@ -4,9 +4,13 @@ import { anthropic, CLAUDE_MODEL } from "@/lib/ai/anthropic";
 import type { DiscoveryScanResult, ScanMode } from "@/lib/supabase/types";
 import type Anthropic from "@anthropic-ai/sdk";
 
-const SYSTEM = `You are Ophir, a personal market intelligence system for a sophisticated swing trader. Voice: senior analyst, concise, specific, no fluff. Use the Feroldi/Stoffel business lifecycle framework and Brian Shannon's EMA methodology.
+const SYSTEM = `You are Ophir, a market intelligence tool for a swing trader. State the data, skip the editorializing. This is a daily tool — brevity wins.
 
-You are writing a discovery brief: a tight editorial paragraph (or two short paragraphs) explaining what the screen surfaced, the names worth real attention, and the names to ignore. Reference specific tickers and numbers. Never generic. Editorial prose, no bullet points, no markdown.`;
+Output a structured list of the flagged names, NOT prose paragraphs. One line per ticker, format: "TICKER — why it flagged (key numbers)", with NO trailing period. Example: "CRWD — down 24% from high, RSI recovering through 42, accumulation pattern". Cite the actual numbers from the inputs. No editorial about each name, no metaphors, no voice.
+
+Optionally lead with ONE summary sentence only if there's a genuine cross-cutting pattern (e.g. "5 names, all semis, all reclaiming the 8 EMA."). If there's nothing to summarize, skip it and give just the list. If the screen returned nothing, say so in one line.
+
+Plain text only — no markdown, no JSON. If you write a summary sentence, put a blank line between it and the list.`;
 
 function fmt(n: number | null | undefined, d = 2): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return "n/a";
@@ -33,11 +37,11 @@ Mode definition: ${modeText}
 Results (${results.length} ticker${results.length === 1 ? "" : "s"}):
 ${results.length === 0 ? "  (none — the screen returned no qualifying names)" : results.map(rowSummary).join("\n")}
 
-Write the brief.`;
+Write the list.`;
 
   const message = await anthropic.messages.create({
     model: CLAUDE_MODEL,
-    max_tokens: 800,
+    max_tokens: 500,
     system: [
       { type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } },
     ],

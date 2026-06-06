@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { relativeTime } from "@/lib/format";
+import { NarrativeBody } from "@/components/shared/NarrativeBody";
 import type { RegimeSnapshot } from "@/lib/supabase/types";
 
 function classificationColor(c: RegimeSnapshot["regime_classification"]): string {
@@ -71,11 +72,7 @@ export function BriefHistory({ briefs }: { briefs: RegimeSnapshot[] }) {
 
               {open && (
                 <div className="prose-editorial border-l-2 border-[var(--border)] pb-4 pl-5 pr-2 pt-1 text-[var(--text-secondary)]">
-                  {(b.narrative ?? "").split(/\n\n+/).filter(Boolean).map(
-                    (para, i) => (
-                      <p key={i}>{para}</p>
-                    ),
-                  )}
+                  {b.narrative && <NarrativeBody narrative={b.narrative} />}
                   {!b.narrative && (
                     <p className="font-ui text-sm italic">
                       No narrative was saved on this snapshot.
