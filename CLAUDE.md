@@ -422,7 +422,7 @@ For everything else: try to fix it, if you can't, flag it and move on.
 1. `/api/cron/signals` uses custom auth diverging from shared `authorizeCron()` — should be unified
 2. `regime_snapshots` missing UNIQUE on (snapshot_date, snapshot_type) — allows duplicate snapshots
 3. Alpha Vantage quota exhaustion (25/day) silently returns stale fundamentals
-4. No migrations folder — schema lives only in Supabase, types manually maintained in `lib/supabase/types.ts`
+4. ~~No migrations folder~~ **Resolved 2026-06-11:** schema versioned via baseline `supabase/migrations/20260612121349_remote_schema.sql` (CLI linked; pre-history archived in `supabase/migrations_archive/`). Types still manually maintained in `lib/supabase/types.ts`
 5. `NEXT_PUBLIC_SITE_URL` missing from `.env.local` — magic links default to localhost in dev
 6. README.md is default create-next-app boilerplate — stale
 7. Unused boilerplate SVGs in public/
@@ -430,7 +430,7 @@ For everything else: try to fix it, if you can't, flag it and move on.
 9. Supabase SECURITY DEFINER functions callable via REST — should revoke EXECUTE from public
 10. Yahoo schema validation disabled — malformed responses pass through silently
 11. No request-param validation on API routes despite `zod` being a dependency — query/body params accepted as free text
-12. `touch_updated_at()` has a mutable `search_path` — flagged by Supabase advisor; should pin `search_path`
+12. ~~`touch_updated_at()` has a mutable `search_path`~~ **Resolved 2026-06-11:** pinned `search_path = ''` (captured in `supabase/migrations/20260612121349_remote_schema.sql`)
 
 ---
 
