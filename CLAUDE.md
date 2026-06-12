@@ -28,6 +28,8 @@
 
 10. **Commit and push directly to main.** No branches, no PRs. Brian reviews after.
 
+11. **All cron routes must use `authorizeCron()` — never implement inline auth.** Any route that diverges from a shared auth helper is a bug.
+
 ---
 
 ## Project Identity
@@ -419,7 +421,7 @@ For everything else: try to fix it, if you can't, flag it and move on.
 
 ## Known Issues
 
-1. `/api/cron/signals` uses custom auth diverging from shared `authorizeCron()` — should be unified
+1. ~~`/api/cron/signals` uses custom auth diverging from shared `authorizeCron()`~~ **Resolved 2026-06-12:** inline `isAuthorized()` deleted; all six cron routes now use `authorizeCron()` (see Critical Rule 11)
 2. `regime_snapshots` missing UNIQUE on (snapshot_date, snapshot_type) — allows duplicate snapshots
 3. Alpha Vantage quota exhaustion (25/day) silently returns stale fundamentals
 4. ~~No migrations folder~~ **Resolved 2026-06-11:** schema versioned via baseline `supabase/migrations/20260612121349_remote_schema.sql` (CLI linked; pre-history archived in `supabase/migrations_archive/`). Types still manually maintained in `lib/supabase/types.ts`
@@ -431,6 +433,7 @@ For everything else: try to fix it, if you can't, flag it and move on.
 10. Yahoo schema validation disabled — malformed responses pass through silently
 11. No request-param validation on API routes despite `zod` being a dependency — query/body params accepted as free text
 12. ~~`touch_updated_at()` has a mutable `search_path`~~ **Resolved 2026-06-11:** pinned `search_path = ''` (captured in `supabase/migrations/20260612121349_remote_schema.sql`)
+13. App-level rate limiting on auth endpoints (login/signup/magic-link) is intentionally omitted — single user, invite-gated, Supabase-side limits apply. Accepted risk; revisit if the user base grows.
 
 ---
 
