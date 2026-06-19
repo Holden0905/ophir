@@ -4,7 +4,7 @@
       "Bash(npm run *)",
       "Bash(npx tsc *)",
       "Bash(npx next *)",
-      "Bash(git status)", "Bash(git diff *)", "Bash(git log *)",
+      "Bash(git status *)", "Bash(git diff *)", "Bash(git log *)",
       "Bash(grep *)", "Bash(ls *)", "Bash(cat /home/bjones/ophir/*)",
       "Bash(npx supabase gen types *)", "Bash(npx supabase migration list)"
     ],
@@ -13,7 +13,7 @@
       "Bash(npx supabase db *)",
       "Bash(curl *api.supabase.com*)",
       "Bash(*sbp_*)", "Bash(*.env*)",
-      "Bash(node /tmp/*)"
+      "Bash(node /tmp/*)", "Bash(/tmp/*)"
     ],
     "deny": [
       "Bash(rm -rf *)",
